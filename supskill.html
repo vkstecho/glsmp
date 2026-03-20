@@ -1834,7 +1834,7 @@ table.matrix td.mic-lbl{text-align:left;padding-left:14px;font-size:12px;font-we
 ══════════════════════════════════════ -->
 <script>
 // ══ SUPSKILL STATE ══
-var GLSMP_USER = { name:'', empId:'', role:'supervisor', machine:'Met-1', section:'M1', shift:'DAY', onDuty:[] };
+var GLSMP_USER = { name:'', empId:'', role:'supervisor', machine:'Met-1', section:'M1', machineCode:'M-1', shift:'DAY', onDuty:[] };
 
 // ── OD BAR CHART (SCADA style) ──
 function drawODBars(){
@@ -1883,6 +1883,69 @@ function autoFillDateTime(){
   if(ts) ts.textContent = dayHi+', '+dateHi+' · '+(isDay?'दिन शिफ्ट 07:00–19:00':'रात शिफ्ट 19:00–07:00');
 }
 
+// ── MACHINE → SECTION MAPPING ──
+// Maps SupSkill machine display name to GLSMP section codes
+function getMachineSections(machine){
+  const m = (machine || '').toLowerCase().replace(/\s+/g,'');
+  if(m.includes('met-1') || m.includes('met1') || m === 'm-1') return ['M1'];
+  if(m.includes('met-2') || m.includes('met2') || m === 'm-2') return ['M2'];
+  if(m.includes('slit-1') || m.includes('slit1') || m === 's-1') return ['S1'];
+  if(m.includes('slit-2') || m.includes('slit2') || m === 's-2') return ['S2'];
+  if(m.includes('met'))  return ['M1','M2'];
+  if(m.includes('slit')) return ['S1','S2'];
+  return ['M1']; // default
+}
+
+// Checks if an employee belongs to the given machine's section
+// Uses actual employee data (e.mc / machine field) — NOT hardcoded EMP_ROLES
+// For supervisors: checks their machine field (e.g. 'Slitter', 'M-1', 'M-2')
+function employeeBelongsToMachine(emp, machine){
+  const sections = getMachineSections(machine);
+  const isMet  = sections.some(s => s.startsWith('M'));
+  const isSlit = sections.some(s => s.startsWith('S'));
+  const rt = (emp.roleType || '').toLowerCase();
+  const empMc = (emp.machine || '').toLowerCase();
+  const empDesig = (emp.designation || '').toLowerCase();
+  const empSec = (emp.section || '').toUpperCase();
+
+  // Manager — NOT included in machine filter; only appears in supervisor field as fallback
+  if(rt === 'mgr' || empSec === 'MGR') return false;
+
+  // Supervisor — use their actual machine field to determine met vs slit
+  if(empDesig.includes('supervisor') || empDesig === 'sup' || empSec === 'SUP' || rt.startsWith('sup')){
+    // Primary: check employee's actual machine assignment from Firebase
+    if(empMc){
+      const isMcMet  = empMc.includes('m-1') || empMc.includes('m-2') || empMc.includes('met') || empMc.includes('m1') || empMc.includes('m2');
+      const isMcSlit = empMc.includes('slit') || empMc.includes('s-1') || empMc.includes('s-2') || empMc.includes('s1') || empMc.includes('s2');
+      if(isMcMet && isMet) return true;
+      if(isMcSlit && isSlit) return true;
+      if(isMcMet || isMcSlit) return false; // has machine but doesn't match
+    }
+    // Fallback: check section field
+    if(empSec.startsWith('M') && isMet) return true;
+    if(empSec.startsWith('S') && isSlit) return true;
+    // Fallback: roleType from EMP_ROLES (last resort)
+    if(rt === 'sup_met' && isMet) return true;
+    if(rt === 'sup_slit' && isSlit) return true;
+    // Unknown supervisor — exclude to be safe
+    return false;
+  }
+
+  // Direct section match (operators)
+  if(sections.includes(empSec)) return true;
+
+  // Shared machine (e.g. mc = 'M-1&2') — employee works on multiple machines
+  if(empMc){
+    if(empMc.includes('&') || empMc.includes('1&2') || empMc.includes('1 & 2')){
+      const empIsMet  = empSec.startsWith('M');
+      const empIsSlit = empSec.startsWith('S');
+      if(empIsMet && isMet) return true;
+      if(empIsSlit && isSlit) return true;
+    }
+  }
+  return false;
+}
+
 // ── APPLY GLSMP USER — called after postMessage or fallback ──
 function applyGLSMPUser(userData){
   const name = userData.name || userData.supervisorName || '—';
@@ -1894,6 +1957,14 @@ function applyGLSMPUser(userData){
   if(userData.shift) GLSMP_USER.shift = userData.shift;
   if(userData.onDuty) GLSMP_USER.onDuty = userData.onDuty;
   if(userData.employees) GLSMP_USER.allEmployees = userData.employees;
+
+  // Store section info from GLSMP
+  if(userData.section) GLSMP_USER.section = userData.section;
+  if(userData.machineCode) GLSMP_USER.machineCode = userData.machineCode;
+  // If supervisor section is SUP/MGR, derive machine section from machine name
+  if(!userData.section || userData.section === 'SUP' || userData.section === 'MGR'){
+    GLSMP_USER.section = getMachineSections(machine)[0] || 'M1';
+  }
 
   // Update every name reference
   ['user-name-display','greeting-name'].forEach(id=>{
@@ -1942,17 +2013,39 @@ function applyGLSMPUser(userData){
 }
 
 // ── POPULATE OPERATOR CHIPS from GLSMP employee list ──
+// Now filters employees by machine section so only relevant operators show
+// Excludes: the logged-in supervisor, managers, and slitter supervisors from met reports (and vice versa)
 function populateOperatorChips(employees, supervisorName){
   const container = document.getElementById('op-chips');
   if(!container) return;
   // Clear existing chips (keep add button)
   const addBtn = container.querySelector('.add-chip');
   container.innerHTML='';
-  // Add employees who are on duty (excluding supervisor)
-  employees
-    .filter(e => e.onDuty && e.name !== supervisorName)
-    .slice(0,6)
-    .forEach(e=>{
+  // Get current machine from form
+  const currentMachine = GLSMP_USER.machine || 'Met-1';
+  const supNameLower = (supervisorName || '').toLowerCase().trim();
+
+  // Helper: check if employee name matches the supervisor (handles partial names like VIVEK vs VIVEK KUMAR)
+  function isSupervisorMatch(empName){
+    const eName = (empName || '').toLowerCase().trim();
+    if(!supNameLower || !eName) return false;
+    return eName === supNameLower || eName.startsWith(supNameLower + ' ') || supNameLower.startsWith(eName + ' ');
+  }
+
+  // Filter: on duty + belongs to this machine's section + not the supervisor + not a manager
+  const filtered = employees
+    .filter(e => e.onDuty)
+    .filter(e => !isSupervisorMatch(e.name))
+    .filter(e => {
+      const rt = (e.roleType || '').toLowerCase();
+      // Exclude managers from operator chips — they appear in supervisor field
+      if(rt === 'mgr') return false;
+      return true;
+    })
+    .filter(e => employeeBelongsToMachine(e, currentMachine));
+
+  // Add filtered employee chips (no arbitrary limit)
+  filtered.forEach(e=>{
       const ini = e.name.split(' ').map(n=>n[0]||'').join('').substring(0,2).toUpperCase();
       const chip = document.createElement('div');
       chip.className='chip';
@@ -1963,8 +2056,55 @@ function populateOperatorChips(employees, supervisorName){
   if(addBtn) container.appendChild(addBtn);
   else {
     const nb=document.createElement('button');
-    nb.className='add-chip';nb.onclick=addOperator;nb.textContent='＋ Add';
+    nb.className='add-chip';nb.onclick=addOperator;nb.textContent='＋ Operator जोड़ें';
     container.appendChild(nb);
+  }
+  // Update the note with filtered count
+  const note = document.getElementById('op-note');
+  if(note){
+    const totalOnDuty = employees.filter(e=>e.onDuty).length;
+    note.textContent = filtered.length > 0
+      ? '✓ '+filtered.length+' operators for '+currentMachine+' ('+totalOnDuty+' total on shift)'
+      : 'GLSMP से operators auto-fill होंगे · या manually add करें';
+  }
+
+  // ── Auto-detect correct supervisor for this machine from on-duty list ──
+  const isMet  = getMachineSections(currentMachine).some(s => s.startsWith('M'));
+  const isSlit = getMachineSections(currentMachine).some(s => s.startsWith('S'));
+
+  // Helper: is this employee a supervisor?
+  function isSupervisorRole(e){
+    const d = (e.designation || '').toLowerCase();
+    const rt = (e.roleType || '').toLowerCase();
+    return d.includes('supervisor') || d === 'sup' || rt.startsWith('sup');
+  }
+  // Helper: does this supervisor's actual machine match the report machine?
+  function supMatchesMachine(e){
+    const mc = (e.machine || '').toLowerCase();
+    if(!mc) return false;
+    const mcIsMet  = mc.includes('m-1') || mc.includes('m-2') || mc.includes('met') || mc.includes('m1') || mc.includes('m2');
+    const mcIsSlit = mc.includes('slit') || mc.includes('s-1') || mc.includes('s-2') || mc.includes('s1') || mc.includes('s2');
+    if(mcIsMet && isMet) return true;
+    if(mcIsSlit && isSlit) return true;
+    return false;
+  }
+
+  // Priority 1: Machine-specific supervisor (actual machine field matches)
+  const machineSupervisors = employees
+    .filter(e => e.onDuty && isSupervisorRole(e) && supMatchesMachine(e));
+
+  // Priority 2: Manager — only if no machine-specific supervisor is on duty
+  const managers = employees
+    .filter(e => e.onDuty)
+    .filter(e => (e.roleType || '').toLowerCase() === 'mgr' || (e.section || '').toUpperCase() === 'MGR');
+
+  const bestSup = machineSupervisors.length > 0 ? machineSupervisors[0]
+                : managers.length > 0 ? managers[0]
+                : null;
+
+  if(bestSup){
+    const sup = document.getElementById('form-supervisor-name');
+    if(sup) sup.textContent = bestSup.name + ' ✓';
   }
 }
 
@@ -2023,6 +2163,7 @@ function onDatePicked(val){
 
 // ── LOOKUP EMPLOYEES FROM GLSMP FOR A SPECIFIC DATE ──
 // Uses the ms[] schedule array from GLSMP employee data
+// Now filters by machine section for accurate operator count
 function lookupGLSMPEmployeesForDate(dayIdx, shiftType){
   try{
     // Try to access parent GLSMP's employee data
@@ -2038,6 +2179,8 @@ function lookupGLSMPEmployeesForDate(dayIdx, shiftType){
 
     // Filter employees on duty for this date + shift
     const onDuty = emps.filter(e => {
+      if(!e.ms && !e.shiftCode) return false;
+      if(e.shiftCode) return e.onDuty; // already computed by getEmployeesOnCurrentShift
       if(!e.ms || !e.ms[dayIdx]) return false;
       return e.ms[dayIdx] === shiftType || e.ms[dayIdx] === 'G'; // G = General
     });
@@ -2051,10 +2194,13 @@ function lookupGLSMPEmployeesForDate(dayIdx, shiftType){
     );
 
     // Update operator chips with employees from this specific date
+    // populateOperatorChips now handles machine-section filtering internally
     if(onDuty.length > 0){
       populateOperatorChips(onDuty.map(e=>({...e, onDuty:true})), GLSMP_USER.name);
       const note = document.getElementById('date-note');
-      if(note) note.textContent = '✓ '+onDuty.length+' employees found for this date';
+      const currentMachine = GLSMP_USER.machine || 'Met-1';
+      const machineFiltered = onDuty.filter(e => employeeBelongsToMachine(e, currentMachine));
+      if(note) note.textContent = '✓ '+machineFiltered.length+' employees found for '+currentMachine+' ('+onDuty.length+' total on duty)';
     }
 
     // Update supervisor if different
@@ -2081,7 +2227,13 @@ window.addEventListener('message', function(e){
     if(d.onDuty && d.onDuty.length > 0){
       populateOperatorChips(d.onDuty, GLSMP_USER.name);
       const note = document.getElementById('date-note');
-      if(note) note.textContent = '✓ '+d.onDuty.length+' employees found for '+d.date;
+      const currentMachine = GLSMP_USER.machine || 'Met-1';
+      const machineFiltered = d.onDuty.filter(emp => employeeBelongsToMachine(emp, currentMachine));
+      if(note) note.textContent = '✓ '+machineFiltered.length+' employees found for '+currentMachine+' on '+d.date;
+    }
+    // Store section info if provided
+    if(d.section && d.section !== 'SUP' && d.section !== 'MGR'){
+      GLSMP_USER.section = d.section;
     }
     return;
   }
@@ -2094,8 +2246,11 @@ window.addEventListener('message', function(e){
     shiftLabel: d.shiftLabel,
     date: d.date,
     onDuty: d.onDuty || [],
+    employees: d.employees || [],
     machine: (d.onDuty && d.onDuty[0] && d.onDuty[0].machine) ? d.onDuty[0].machine : 'Met-1',
-    role: d.role || 'supervisor'
+    role: d.role || 'supervisor',
+    section: d.section || '',
+    machineCode: d.machineCode || ''
   });
 });
 
@@ -2328,6 +2483,26 @@ function resetReportForm(){
   // Hide status bar
   const bar=document.getElementById('report-status-bar');
   if(bar) bar.style.display='none';
+
+  // ── FIX: Re-request fresh employee data from GLSMP ──
+  try{
+    const now = new Date();
+    const dateStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+    const hr = now.getHours();
+    const shiftCode = (hr >= 7 && hr < 19) ? 'D' : 'N';
+    window.parent.postMessage({
+      type: 'SUPSKILL_REQUEST_SHIFT_DATA',
+      date: dateStr,
+      dayIndex: now.getDate() - 1,
+      shift: shiftCode
+    }, '*');
+  }catch(e){}
+  // Also re-populate from local cache if available
+  if(GLSMP_USER.onDuty && GLSMP_USER.onDuty.length > 0){
+    populateOperatorChips(GLSMP_USER.onDuty, GLSMP_USER.name);
+  } else if(GLSMP_USER.allEmployees && GLSMP_USER.allEmployees.length > 0){
+    populateOperatorChips(GLSMP_USER.allEmployees, GLSMP_USER.name);
+  }
 }
 // Init calc runs via initSupSkill
 
