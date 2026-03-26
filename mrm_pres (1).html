@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MRM Presentation</title>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3fAuAp404MbZPZfVH7M3oCqK3tM1mQhg",
+    authDomain: "man-power-mp.firebaseapp.com",
+    databaseURL: "https://man-power-mp-default-rtdb.firebaseio.com",
+    projectId: "man-power-mp",
+    storageBucket: "man-power-mp.firebasestorage.app",
+    messagingSenderId: "374332864827",
+    appId: "1:374332864827:web:cfcdb29fa96f333410df1e"
+  };
+  try{
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+    window._mrmFbGet = async function(path){
+      const snap = await get(ref(db, path));
+      return snap.exists() ? snap.val() : null;
+    };
+    console.log('[MRM] ✅ Firebase connected directly');
+    // Auto-load if postMessage hasn't delivered yet
+    setTimeout(async ()=>{
+      if(window._mrmDataLoaded) return;
+      console.log('[MRM] PostMessage not received, loading from Firebase directly...');
+      try{
+        const months = await window._mrmFbGet('metcostData');
+        const settings = await window._mrmFbGet('metcostSettings');
+        if(months && Object.keys(months).length>0){
+          window._mrmDataLoaded=true;
+          window.metData=months;
+          window.metSettings=settings||{};
+          console.log('[MRM] ✅ Direct Firebase load: '+Object.keys(months).length+' months');
+          if(window.renderApp) window.renderApp();
+        }
+      }catch(ex){console.error('[MRM] Direct load error:',ex)}
+    }, 3000);
+  }catch(e){console.warn('[MRM] Firebase init failed:',e)}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0f1a;--sf:#111825;--tx:#e2e8f0;--tx2:#94a3b8;--bd:rgba(255,255,255,.08);--ac:#ef4444;--ac2:rgba(239,68,68,.15);--gn:#22c55e;--r:12px;--fn:'DM Sans',sans-serif;--mn:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);min-height:100vh}
+.hd{background:var(--sf);border-bottom:1px solid var(--bd);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.hd h1{font-size:18px;font-weight:800;background:linear-gradient(90deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hd p{font-size:11px;color:var(--tx2)}
+.ct{padding:16px;max-width:600px;margin:0 auto}
+.cd{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.ct2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--tx)}
+select,input{background:var(--bg);border:1px solid var(--bd);color:var(--tx);padding:8px 12px;border-radius:8px;font-family:var(--fn);font-size:13px;width:100%}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:var(--r);font-family:var(--fn);font-size:15px;font-weight:700;cursor:pointer;text-align:center}
+.bp{background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff}
+.bp:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:12px;color:var(--tx2);margin-top:8px;text-align:center}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.months{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.months span{padding:4px 10px;border-radius:6px;font-size:11px;font-family:var(--mn);background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2)}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div style="font-size:28px">📊</div>
+  <div><h1>MRM Presentation</h1><p>Monthly Review Meeting · Auto-generated from MetCost Pro data</p></div>
+</div>
+<div class="ct" id="app">
+  <div class="cd">
+    <div class="ct2">⏳ Waiting for MetCost Pro data...</div>
+    <p style="font-size:12px;color:var(--tx2)">Data will be received automatically from MET Power app. If this takes too long, tap the button below.</p>
+    <button onclick="manualLoad()" style="margin-top:12px;padding:10px 20px;border-radius:8px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#ef4444;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--fn)">🔄 Load from Firebase</button>
+    <div id="loadStatus" style="font-size:11px;color:var(--tx2);margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+const GLS_LOGO='data:image/jpeg;base64,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';
+let metData=window.metData||null, metSettings=window.metSettings||null;
+window.metData=metData;window.metSettings=metSettings;
+const ML=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function ml(mk){const [y,m]=mk.split('-');return ML[parseInt(m)-1]+' '+y}
+function fmt(v,d){return(typeof v==='number')?v.toFixed(d===undefined?2:d):'—'}
+
+// Listen for data from parent
+window.addEventListener('message',e=>{
+  if(!e.data||!e.data.type) return;
+  if(e.data.type==='MRM_LOAD_DATA'){
+    metData=e.data.months||{};
+    metSettings=e.data.settings||{};
+    window._mrmDataLoaded=true;
+    console.log('[MRM] Received '+Object.keys(metData).length+' months via postMessage');
+    renderApp();
+  }
+});
+// Request data from parent
+function requestData(){
+  try{window.parent.postMessage({type:'MRM_REQUEST_DATA'},'*')}catch(e){}
+}
+requestData();
+setTimeout(requestData,2000);
+setTimeout(requestData,5000);
+window.renderApp=renderApp;
+window.generatePPT=generatePPT;
+window.manualLoad=async function(){
+  const st=document.getElementById('loadStatus');
+  if(st) st.textContent='Loading from Firebase...';
+  try{
+    if(!window._mrmFbGet){if(st) st.textContent='❌ Firebase not connected yet. Wait 3 seconds and try again.';return}
+    const months=await window._mrmFbGet('metcostData');
+    const settings=await window._mrmFbGet('metcostSettings');
+    if(months&&Object.keys(months).length>0){
+      metData=months;metSettings=settings||{};
+      window.metData=metData;window.metSettings=metSettings;
+      window._mrmDataLoaded=true;
+      if(st) st.textContent='✅ Loaded '+Object.keys(months).length+' months!';
+      renderApp();
+    }else{
+      if(st) st.textContent='❌ No data in Firebase. Sync from MetCost Pro first.';
+    }
+  }catch(ex){if(st) st.textContent='❌ Error: '+ex.message}
+};
+
+function renderApp(){
+  if(!metData) metData=window.metData;
+  if(!metSettings) metSettings=window.metSettings;
+  const months=metData?Object.keys(metData).sort().reverse():[];
+  if(!months.length){document.getElementById('app').innerHTML='<div class="cd"><div class="ct2">❌ No computed months found</div><p style="font-size:12px;color:var(--tx2)">Upload Excel files in MetCost Pro and Sync to Cloud first.</p></div>';return}
+  const r=metSettings.rates||{};
+  let html=`
+    <div class="cd">
+      <div class="ct2">📊 Generate MRM Presentation</div>
+      <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">${months.length} months available. Select month and generate PPT.</p>
+      <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Select Month</label>
+      <select id="selMonth">${months.map(m=>'<option value="'+m+'">'+ml(m)+'</option>').join('')}</select>
+      <div style="margin-top:12px">
+        <button class="btn bp" onclick="generatePPT()" id="genBtn">📊 Generate MRM Presentation</button>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+    <div class="cd">
+      <div class="ct2">Available Months</div>
+      <div class="months">${months.slice(0,24).map(m=>'<span>'+ml(m)+'</span>').join('')}</div>
+    </div>`;
+  document.getElementById('app').innerHTML=html;
+}
+
+async function generatePPT(){
+  const mk=document.getElementById('selMonth').value;
+  const btn=document.getElementById('genBtn');
+  const stat=document.getElementById('status');
+  btn.disabled=true;btn.textContent='⏳ Generating...';stat.textContent='';
+  try{
+    await _buildPPT(mk);
+    stat.textContent='✅ PPT downloaded successfully!';stat.style.color='#22c55e';
+  }catch(err){
+    stat.textContent='❌ Error: '+err.message;stat.style.color='#ef4444';
+    console.error(err);
+  }
+  btn.disabled=false;btn.textContent='📊 Generate MRM Presentation';
+}
+
+async function _buildPPT(mk){
+  const d=metData[mk];if(!d) throw new Error('No data for '+mk);
+  const r=(metSettings.rates)||{};
+  const months=Object.keys(metData).sort();
+  const mkIdx=months.indexOf(mk);
+  // Get 3 months for tracking table
+  const m3=[months[mkIdx-2],months[mkIdx-1],mk].filter(Boolean);
+  // Get 13 months for trend charts
+  const m13=months.slice(Math.max(0,mkIdx-12),mkIdx+1);
+  const [yr,mo]=mk.split('-');
+  const monthName=ML[parseInt(mo)-1]+'-'+yr.slice(2);
+  const fullMonth=ML[parseInt(mo)-1]+' '+yr;
+
+  const pres=new PptxGenJS();
+  pres.layout='LAYOUT_WIDE'; // 13.3 x 7.5
+  pres.author='MetCost Pro';
+  pres.title='Metallizer Performance Review '+fullMonth;
+
+  const C={dk:'1E2761',tl:'0D6E6E',wh:'FFFFFF',gy:'F2F2F2',rd:'DC2626',gn:'22C55E',am:'F59E0B',tx:'2D3748',ltx:'6B7280'};
+  const hdrFont='Calibri';const bdFont='Calibri';
+  const tblBorder={pt:0.5,color:'CBD5E1'};
+
+  // ══ SLIDE 1: Title ══
+  let s1=pres.addSlide();
+  s1.background={color:C.dk};
+  s1.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:13.3,h:7.5,fill:{color:C.dk}});
+  // Decorative shape
+  s1.addShape(pres.shapes.RECTANGLE,{x:0,y:6.8,w:13.3,h:0.7,fill:{color:'0D9488'}});
+  s1.addImage({data:GLS_LOGO,x:0.5,y:0.4,w:1.2,h:0.8});
+  s1.addText('Metallizer Performance Review',{x:2,y:1.8,w:9.5,h:1.5,fontSize:36,fontFace:hdrFont,color:C.wh,bold:true});
+  s1.addText(fullMonth.toUpperCase(),{x:2,y:3.3,w:9.5,h:0.8,fontSize:28,fontFace:hdrFont,color:'0D9488',bold:true});
+  s1.addText('GLS Polyfilms · Metallizer Department',{x:2,y:5,w:9.5,h:0.5,fontSize:14,fontFace:bdFont,color:'94A3B8'});
+
+  // ══ SLIDE 2: Blank/Index ══
+  let s2=pres.addSlide();
+  s2.background={color:C.wh};
+  s2.addImage({data:GLS_LOGO,x:0.3,y:0.2,w:1.2,h:0.8});
+  s2.addShape(pres.shapes.RECTANGLE,{x:2.7,y:0.5,w:8,h:0.6,fill:{color:C.dk}});
+  s2.addText('Contents',{x:3,y:0.5,w:7,h:0.6,fontSize:20,fontFace:hdrFont,color:C.wh,bold:true});
+  const contents=['Mixed Product Details','SB and Wastages','Monthly Performance Tracking','Wastage Trend','Down gradation Trend','Downtime Summary','Conversion Cost Analysis','Target for Next Month'];
+  contents.forEach((c,i)=>{
+    s2.addText((i+1)+'. '+c,{x:3.2,y:1.5+i*0.65,w:7,h:0.5,fontSize:16,fontFace:bdFont,color:C.tx});
+  });
+
+  // ══ SLIDE 3: Mixed Product Details ══
+  const za=d.zsAgg||{};const byMat=za.byMaterial||[];
+  let s3=pres.addSlide();
+  s3.background={color:C.wh};
+  s3.addImage({data:GLS_LOGO,x:0,y:0,w:1.2,h:0.8});
+  s3.addText('Mixed Product Details',{x:1.7,y:0.1,w:10,h:0.7,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  // Build micron×OD matrix from byMaterial
+  const micRows={'8':{},'10':{},'12':{},'15':{},'19':{},'23':{},'AlOx':{},'RC':{}};
+  byMat.forEach(m=>{
+    const c=(m.code||'').toUpperCase();
+    const dsc=m.desc||m.code||'';
+    const micM=dsc.match(/(\d+)µ/);let mic=micM?micM[1]:'12';
+    if(c.includes('AL')&&c.match(/AL\d/)) mic='AlOx';
+    else if(c.includes('RC')) mic='RC';
+    const odM=dsc.match(/([\d.]+)OD/);const od=odM?odM[1]:'2.2';
+    if(!micRows[mic]) micRows[mic]={};
+    micRows[mic][od]=(micRows[mic][od]||0)+(m.kg||0)/1000;
+  });
+  const odCols=['2.2','2.5','2.8'];
+  const mixHdr=[{text:'Micron/OD',options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11}},
+    ...odCols.map(od=>({text:od,options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11,align:'right'}})),
+    {text:'Total (MT)',options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11,align:'right'}},
+    {text:'Equiv. (MT)',options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11,align:'right'}}];
+  const mixRows=[mixHdr];
+  let grandTotal=0;
+  Object.entries(micRows).forEach(([mic,ods])=>{
+    const total=odCols.reduce((s,od)=>s+(ods[od]||0),0);
+    if(total<0.01) return; // skip empty
+    grandTotal+=total;
+    const bg=mic==='12'?{fill:{color:'E8F5E9'}}:{};
+    mixRows.push([
+      {text:mic==='AlOx'?'12 Mic. AlOx':mic==='RC'?'12 Mic Release':mic,options:{bold:true,fontSize:10,...bg}},
+      ...odCols.map(od=>({text:fmt(ods[od]||0,1),options:{align:'right',fontSize:10,...bg}})),
+      {text:fmt(total,1),options:{align:'right',bold:true,fontSize:10,...bg}},
+      {text:'—',options:{align:'right',fontSize:10,...bg}}
+    ]);
+  });
+  // Total row
+  mixRows.push([
+    {text:'Total',options:{fill:{color:'E2E8F0'},bold:true,fontSize:11}},
+    ...odCols.map(()=>({text:'',options:{fill:{color:'E2E8F0'}}})),
+    {text:fmt(grandTotal,1),options:{fill:{color:'E2E8F0'},bold:true,align:'right',fontSize:11}},
+    {text:fmt(d.equivKg?d.equivKg/1000:grandTotal,0),options:{fill:{color:'E2E8F0'},bold:true,align:'right',fontSize:11}}
+  ]);
+  s3.addTable(mixRows,{x:0.5,y:1,w:12.3,border:tblBorder,colW:[2.5,1.8,1.8,1.8,2.2,2.2],rowH:0.5});
+
+  // ══ SLIDE 4: SB and Wastages ══
+  let s4=pres.addSlide();
+  s4.background={color:C.wh};
+  s4.addImage({data:GLS_LOGO,x:0,y:0,w:1.2,h:0.8});
+  s4.addText('SB and Wastages',{x:1.7,y:0,w:10,h:0.9,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const wasteHdr=['Wastages-SAP','MTD (MT)','MTD%','Target %','Deviation%'].map(t=>({text:t,options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11}}));
+  const metWKg=(d.metWasteKg||0)/1000;
+  const bKg=(d.slitBKg||0)/1000;
+  const wasteData=[wasteHdr,
+    ['Met Sheet Waste',fmt(metWKg,1),fmt(d.metWastePct,1),'1.0',fmt(-(d.metWastePct-1),1)].map((t,i)=>({text:t,options:{fontSize:11,align:i>0?'right':'left',color:i===4&&parseFloat(t)<0?C.rd:C.tx}})),
+    ['B Grade',fmt(bKg,1),fmt(d.bGradePct,1),'0',fmt(-d.bGradePct,1)].map((t,i)=>({text:t,options:{fontSize:11,align:i>0?'right':'left',color:i===4&&parseFloat(t)<0?C.rd:C.tx}})),
+  ];
+  s4.addTable(wasteData,{x:0.3,y:1.7,w:12.7,border:tblBorder,colW:[3.5,2.3,2.3,2.3,2.3],rowH:0.55});
+
+  // ══ SLIDE 5: Monthly Performance Tracking ══
+  let s5=pres.addSlide();
+  s5.background={color:C.wh};
+  s5.addText('Monthly Performance Tracking',{x:1.2,y:0.1,w:10.9,h:0.5,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const perfMetrics=[
+    {l:'Met Feed/Input (MT)',k:'prodKg',div:1000,dp:1},
+    {l:'Slitting Output(MT)',k:'effectiveProd',div:1000,dp:1},
+    {l:'Met Waste Produced(%)',k:'metWastePct',dp:2},
+    {l:'B Grade Generated(%)',k:'bGradePct',dp:1},
+    {l:'Slitting Output Equivalent(MT)',k:'equivKg',div:1000,dp:1},
+    {l:'Run Days',k:'runDays',fn:v=>v&&v.avg?fmt(v.avg,1):'—'},
+    {l:'Al wire Consumption(Kg/MT)',k:'wireKgsTotal',fn:(v,dd)=>dd.prodMT?fmt(v/dd.prodMT,1):'—'},
+    {l:'Evaporation Boat(Pc/MT)',k:'boatPcsTotal',fn:(v,dd)=>dd.prodMT?fmt(v/dd.prodMT,1):'—'},
+    {l:'Power Consumption(UPT)',k:'pwrU',fn:(v,dd)=>dd.prodMT?fmt(v/dd.prodMT,1):'—'},
+    {l:'Average Width(MM)',k:'odEq',fn:v=>v&&v.avgWidth?fmt(v.avgWidth,0):'—'},
+  ];
+  const perfHdr=[{text:'Month',options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:10}},
+    ...m3.map(m=>({text:ml(m).replace(' 20','').replace(' ',''),options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:10,align:'right'}}))];
+  const perfRows=[perfHdr];
+  perfMetrics.forEach(pm=>{
+    const row=[{text:pm.l,options:{fontSize:10,bold:false}}];
+    m3.forEach(m=>{
+      const dd=metData[m]||{};
+      let val='—';
+      if(pm.fn) val=pm.fn(dd[pm.k],dd);
+      else if(dd[pm.k]!==undefined) val=fmt(dd[pm.k]/(pm.div||1),pm.dp||1);
+      row.push({text:val,options:{align:'right',fontSize:10,fontFace:'JetBrains Mono'}});
+    });
+    perfRows.push(row);
+  });
+  const cw3=[5,...m3.map(()=>(12.4-5)/m3.length)];
+  s5.addTable(perfRows,{x:0.3,y:0.8,w:12.4,border:tblBorder,colW:cw3,rowH:0.42});
+
+  // ══ SLIDE 6: Wastage Trend (Bar Chart) ══
+  let s6=pres.addSlide();
+  s6.background={color:C.wh};
+  s6.addText('Wastage-Trend',{x:0.9,y:0.1,w:11.5,h:0.7,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const wasteTrend=m13.map(m=>{const dd=metData[m]||{};return{label:ml(m).split(' ')[0],value:dd.metWastePct||0}});
+  s6.addChart(pres.charts.BAR,[{
+    name:'% Waste',labels:wasteTrend.map(w=>w.label),values:wasteTrend.map(w=>w.value)
+  }],{x:0.3,y:1.2,w:12.7,h:5.5,barDir:'col',showValue:true,valueFontSize:9,catAxisLabelFontSize:9,
+    chartColors:['0D9488'],showTitle:true,title:'% Non Usable Waste Generated',titleFontSize:12,titleColor:C.tx,
+    valAxisMinVal:0,valAxisMaxVal:Math.max(3,...wasteTrend.map(w=>w.value))+0.5});
+
+  // ══ SLIDE 7: Down gradation Trend ══
+  let s7=pres.addSlide();
+  s7.background={color:C.wh};
+  s7.addText('Down gradation Trend',{x:0.9,y:0.2,w:11.5,h:0.8,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const bgTrend=m13.map(m=>{const dd=metData[m]||{};return{label:ml(m).split(' ')[0],value:dd.bGradePct||0}});
+  s7.addChart(pres.charts.BAR,[{
+    name:'% Down Gradation',labels:bgTrend.map(w=>w.label),values:bgTrend.map(w=>w.value)
+  }],{x:0.3,y:1.2,w:12.7,h:5.5,barDir:'col',showValue:true,valueFontSize:9,catAxisLabelFontSize:9,
+    chartColors:[C.rd],showTitle:true,title:'% Down Gradation (B + 3rd Grade)',titleFontSize:12,titleColor:C.tx,
+    valAxisMinVal:0,valAxisMaxVal:Math.max(3,...bgTrend.map(w=>w.value))+0.5});
+
+  // ══ SLIDE 8: Downtime Summary ══
+  let s8=pres.addSlide();
+  s8.background={color:C.wh};
+  s8.addText('Downtime Summary in Hours',{x:3.3,y:0,w:6.7,h:0.8,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const rd=d.runDays||{};
+  const dtHdr=['Machine','Met-1','Met-2','Total'].map(t=>({text:t,options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11}}));
+  const m1Stop=((rd.m1Stop||0)*24).toFixed(1),m2Stop=((rd.m2Stop||0)*24).toFixed(1);
+  const totalStop=(parseFloat(m1Stop)+parseFloat(m2Stop)).toFixed(1);
+  const dtRows=[dtHdr,
+    ['Total',m1Stop,m2Stop,totalStop],
+    ['Power downtime',((rd.m1PwrStop||0)*24).toFixed(1),((rd.m2PwrStop||0)*24).toFixed(1),(((rd.m1PwrStop||0)+(rd.m2PwrStop||0))*24).toFixed(1)],
+    ['Run Days',fmt(rd.m1||0,1),fmt(rd.m2||0,1),fmt(rd.avg||0,1)],
+  ].map(r=>r.map((t,i)=>({text:String(t),options:{fontSize:11,align:i>0?'right':'left',bold:i===0}})));
+  s8.addTable(dtRows,{x:0.4,y:0.8,w:12.5,border:tblBorder,colW:[4,2.8,2.8,2.8],rowH:0.55});
+
+  // ══ SLIDE 9: Conversion Cost ══
+  let s9=pres.addSlide();
+  s9.background={color:C.wh};
+  const e=d.eq||{};
+  const tgt=r;
+  const ccHdr=['Conversion Cost:','Actual','Equivalent','Target '+(r.targetDate||'')].map(t=>({text:t,options:{fill:{color:C.dk},color:C.wh,bold:true,fontSize:11,align:t==='Conversion Cost:'?'left':'right'}}));
+  const prodKg=d.effectiveProd||d.prodKg||1;
+  const equivKg=d.equivKg||prodKg;
+  const ccRows=[ccHdr,
+    ['Slit Production (Exc. 5&6 Grade)',fmt(prodKg,0),fmt(equivKg,0),''],
+    ['Wastage % Slitter(Inc. 6 Grade)',fmt(d.metWastePct,2),fmt(e.metWPct||d.metWastePct,2),fmt(tgt.tWaste?1:'1.00')],
+    ['B Grade %',fmt(d.bGradePct,2),fmt(e.bGradePct||d.bGradePct,2),'0.00'],
+    ['Bare Film Waste %',fmt(d.bareWastePct,2),fmt(e.bareWPct||d.bareWastePct,2),'0.00'],
+    ['','Cost ₹/Kg','Cost ₹/Kg',''],
+    ['Wire('+fmt(d.wireKgsTotal/d.prodMT,1)+' Kg/MT)',fmt(d.wireCKg),fmt(e.wire),fmt(tgt.tWire||3.05)],
+    ['Boat('+fmt(d.boatPcsTotal/d.prodMT,1)+' Pc/MT)',fmt(d.boatCKg),fmt(e.boat),fmt(tgt.tBoat||1.87)],
+    [{text:'Raw Material Cost:',options:{bold:true}},fmt(d.rmC),fmt(e.rm),fmt((tgt.tWire||3.05)+(tgt.tBoat||1.87))],
+    ['Conversion Cost:','','',''],
+    ['Wastage(Bare+Met Film) Loss',fmt(d.wasteLoss),fmt(e.wasteLoss),fmt(tgt.tWaste||1)],
+    ['B Grade (Loss)',fmt(d.bGradeLoss),fmt(e.bGradeLoss),'0.00'],
+    ['Manpower',fmt(d.mpKg),fmt(e.mp),fmt(tgt.tManpower||0.8)],
+    ['Power',fmt(d.pwrKg),fmt(e.pwr),fmt(tgt.tPower||3.56)],
+    ['Cons & Spares',fmt(d.consKg),fmt(e.cons),fmt(tgt.tCons||0.3)],
+    ['Indirect Expense',fmt(r.indirectExpense||0.26),fmt(r.indirectExpense||0.26),fmt(r.indirectExpense||0.26)],
+    [{text:'Conversion Cost',options:{bold:true,fill:{color:'E8F0FE'}}},{text:fmt(d.convC),options:{bold:true,fill:{color:'E8F0FE'},align:'right'}},{text:fmt(e.convC),options:{bold:true,fill:{color:'E8F0FE'},align:'right'}},{text:fmt((tgt.tWaste||1)+(tgt.tManpower||0.8)+(tgt.tPower||3.56)+(tgt.tCons||0.3)+(r.indirectExpense||0.26)),options:{bold:true,fill:{color:'E8F0FE'},align:'right'}}],
+    [{text:'Total Cost',options:{bold:true}},fmt(d.totalC),fmt(e.totalC),fmt((tgt.tWire||3.05)+(tgt.tBoat||1.87)+(tgt.tWaste||1)+(tgt.tManpower||0.8)+(tgt.tPower||3.56)+(tgt.tCons||0.3)+(r.indirectExpense||0.26))],
+    ['Packing & Freight Cost',fmt(r.packingFreight||1.67),fmt(r.packingFreight||1.67),fmt(r.packingFreight||1.67)],
+    [{text:'Total Cost with Packing',options:{bold:true,fill:{color:'FEF3C7'}}},{text:'₹'+fmt(d.totalWP),options:{bold:true,fill:{color:'FEF3C7'},align:'right'}},{text:'₹'+fmt(e.totalWP),options:{bold:true,fill:{color:'FEF3C7'},align:'right'}},{text:'₹'+fmt((tgt.tWire||3.05)+(tgt.tBoat||1.87)+(tgt.tWaste||1)+(tgt.tManpower||0.8)+(tgt.tPower||3.56)+(tgt.tCons||0.3)+(r.indirectExpense||0.26)+(r.packingFreight||1.67)),options:{bold:true,fill:{color:'FEF3C7'},align:'right'}}],
+  ].map(r=>Array.isArray(r)?r.map((t,i)=>typeof t==='object'?t:{text:String(t),options:{fontSize:10,align:i>0?'right':'left'}}):r);
+  s9.addTable(ccRows,{x:0.1,y:0.1,w:13,border:tblBorder,colW:[4.5,2.8,2.8,2.8],rowH:0.35});
+
+  // ══ SLIDE 10: Target for Next Month ══
+  let s10=pres.addSlide();
+  s10.background={color:C.wh};
+  const nextMo=parseInt(mo)>=12?ML[0]+'-'+(parseInt(yr)+1):ML[parseInt(mo)]+'-'+yr;
+  s10.addText('Target for the Next Month of '+nextMo,{x:0.7,y:0,w:12,h:0.9,fontSize:28,fontFace:hdrFont,color:C.dk,bold:true});
+  const tgtRows=[
+    ['Slitting Output(MT) (Equivalent 12 MIC 2.2 OD)','1875'],
+    ['Number of Run Days','25'],
+    ['Running Time (Hours/Machine/Day)','15.5'],
+    ['Met Waste(%)','1.0'],
+    ['B Grade Generation(%)','0.1'],
+    ['Overall Efficiency(%)','98.9'],
+  ].map(r=>[{text:r[0],options:{fontSize:13,bold:true}},{text:r[1],options:{fontSize:13,align:'right',fontFace:'JetBrains Mono',bold:true,color:C.dk}}]);
+  s10.addTable(tgtRows,{x:0.4,y:1.2,w:12.5,border:tblBorder,colW:[8.5,4],rowH:0.7});
+
+  // ══ SLIDE 11: Thanks ══
+  let s11=pres.addSlide();
+  s11.background={color:C.dk};
+  s11.addImage({data:GLS_LOGO,x:5.7,y:1.5,w:2.1,h:1.4});
+  s11.addText('Thanks',{x:2,y:4.5,w:9.3,h:1.5,fontSize:48,fontFace:hdrFont,color:C.wh,bold:true,align:'center'});
+
+  // Download
+  await pres.writeFile({fileName:'Met_Presentation_'+fullMonth.replace(' ','_')+'.pptx'});
+}
+</script>
+</body>
+</html>
