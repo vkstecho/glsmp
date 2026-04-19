@@ -251,36 +251,31 @@ function parseDate(v){
 function getMonthKey(d){const dt=parseDate(d);if(!dt)return null;return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');}
 function getDateStr(d){const dt=parseDate(d);if(!dt)return null;return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
 
-// Parse "Chamber Open Time" etc. → minutes-from-midnight (0-1439), or null
-function parseTimeToMins(v){
-  if(v==null||v==='') return null;
-  // Date/time objects
-  if(v instanceof Date){
-    if(isNaN(v)) return null;
-    return v.getHours()*60+v.getMinutes();
-  }
-  // Excel fractional day (0.25 = 6:00am)
-  if(typeof v==='number'){
-    if(v>=0&&v<1) return Math.round(v*1440)%1440;
-    // If it's a large serial, take the fractional part
-    const f=v-Math.floor(v);
-    return Math.round(f*1440)%1440;
-  }
-  // String "HH:MM" or "HH:MM:SS" or "H:MM AM"
-  const s=String(v).trim();
-  if(!s) return null;
-  let m=s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?$/);
-  if(m){
-    let h=+m[1],mn=+m[2];
-    const ap=m[4]?m[4].toUpperCase():null;
-    if(ap==='PM'&&h<12) h+=12;
-    if(ap==='AM'&&h===12) h=0;
-    if(h>=24||mn>=60) return null;
-    return h*60+mn;
-  }
-  // Fractional day in string form
-  const n=parseFloat(s);
-  if(!isNaN(n)&&n>=0&&n<1) return Math.round(n*1440)%1440;
+// Parse time values → minutes-from-midnight (0-1439), or null
+// DIRECT PORT of MetCost Pro's parseT (line 1880) — proven to work with real ZJUMBO data.
+// MetCost Pro returns {h,m}; we just convert to minutes.
+function parseTimeToMins(t){
+  if(t==null||t===''||t===false) return null;
+  // JS Date object (SheetJS cellDates:true)
+  if(t instanceof Date){if(isNaN(t.getTime())) return null; return t.getHours()*60+t.getMinutes()}
+  if(typeof t==='object'&&typeof t.getHours==='function'){return t.getHours()*60+t.getMinutes()}
+  // Generic object — try toString
+  if(typeof t==='object'){try{const s=t.toString();if(s==='[object Object]') return null;const p=s.match(/(\d{1,2}):(\d{2})/);if(p){let h=+p[1];if(/pm/i.test(s)&&h<12)h+=12;if(/am/i.test(s)&&h===12)h=0;return h*60+(+p[2])}}catch(e){}return null}
+  // Number — Excel serial time fraction (0.4722 = 11:20)
+  if(typeof t==='number'){if(isNaN(t)) return null;const f=t>=1?t-Math.floor(t):Math.abs(t);const h=Math.floor(f*24);const m=Math.round((f*24-h)*60)%60;return(h%24)*60+m}
+  // Boolean
+  if(typeof t==='boolean') return null;
+  // String
+  const s=String(t).trim();
+  if(!s||s==='NaN'||s==='null'||s==='undefined') return null;
+  // Try HH:MM with optional AM/PM (handles "11:20:00 AM", "2:10:00 PM", "14:20", etc.)
+  // NOTE: MetCost Pro uses flexible separators [:.\\-] not just colon
+  const p=s.match(/(\d{1,2})\s*[:.\-]\s*(\d{2})(?:\s*[:.\-]\s*\d{2})?\s*(AM|PM|am|pm)?/i);
+  if(p){let h=+p[1],m=+p[2];if(p[3]){const pm=p[3].toUpperCase()==='PM';if(pm&&h<12)h+=12;if(!pm&&h===12)h=0}return h*60+m}
+  // Try as numeric string (SheetJS raw mode can return "0.4722")
+  const nv=parseFloat(s);if(!isNaN(nv)&&nv>=0&&nv<1){const h=Math.floor(nv*24);return(h%24)*60+Math.round((nv*24-h)*60)%60}
+  // Try as Date string ("1899-12-30T03:15:00.000Z" or any parseable date string)
+  try{const d=new Date(s);if(!isNaN(d.getTime()))return d.getHours()*60+d.getMinutes()}catch(e){}
   return null;
 }
 
@@ -307,30 +302,48 @@ function shiftFromMins(mins){
 }
 
 // ═══════════════════════════════════════════════════════════════
+// FLEXIBLE COLUMN LOOKUP — tries multiple name variants
+// MetCost Pro's Web Worker stores the exact Excel header text as keys.
+// SAP exports have inconsistent casing across versions.
+// ═══════════════════════════════════════════════════════════════
+function findCol(row,variants){
+  for(let i=0;i<variants.length;i++){
+    const v=row[variants[i]];
+    if(v!==undefined&&v!==null) return v;
+  }
+  // Last resort: case-insensitive search through all keys
+  const target=variants[0].toLowerCase();
+  for(const k of Object.keys(row)){
+    if(k.toLowerCase()===target) return row[k];
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ROLL PARSING — extract per-roll time components
 // ═══════════════════════════════════════════════════════════════
 function extractRollTimes(r){
   // Chamber Open Time — defines the shift bucket
-  const coMins = parseTimeToMins(r['Chamber Open Time']||r['Chamber open Time']);
+  const coMins = parseTimeToMins(findCol(r,['Chamber Open Time','Chamber open Time','Chamber open time']));
   if(coMins==null) return null;
 
-  const ccMins   = parseTimeToMins(r['Chamber Close Time']||r['Chamber close Time']);
-  const vacMins  = parseTimeToMins(r['Vaccum time']||r['Vacuum time']||r['Vacuum Time']);
-  const heatMins = parseTimeToMins(r['Heating Time']||r['Heating time']);
-  const wsMins   = parseTimeToMins(r['Web Start Time']);
-  const weMins   = parseTimeToMins(r['Web End Time']);
-  const ventMins = parseTimeToMins(r['Vent time']||r['Vent Time']);
+  const ccMins   = parseTimeToMins(findCol(r,['Chamber Close Time','Chamber close Time','Chamber close time']));
+  const vacMins  = parseTimeToMins(findCol(r,['Vaccum time','Vacuum time','Vacuum Time','Vaccum Time']));
+  const heatMins = parseTimeToMins(findCol(r,['Heating Time','Heating time']));
+  const wsMins   = parseTimeToMins(findCol(r,['Web Start Time','Web start Time','Web Start time']));
+  const weMins   = parseTimeToMins(findCol(r,['Web End Time','Web end Time','Web End time']));
+  const ventMins = parseTimeToMins(findCol(r,['Vent time','Vent Time','Vent time ']));
 
   // Col P is a direct minute value (confirmed 25 matches 03:15→03:40)
-  let rco = Math.abs(parseFloat(r['Roll Change over tim']||r['Roll Change over time']||0));
+  let rco = Math.abs(parseFloat(findCol(r,['Roll Change over tim','Roll Change over time','Roll Changeover Time','Roll change over tim'])||0));
   if(isNaN(rco)) rco=0;
   // Fallback: if RCO missing, calculate from Chamber Open→Close
   if(rco===0 && ccMins!=null) rco = minsBetween(coMins,ccMins);
 
-  const downtime = Math.abs(parseFloat(r['Down Time']||0));
-  const remarks  = String(r['Remarks']||'').trim();
-  const length   = parseFloat(r['Length']||0)||0;
-  const qty      = parseFloat(r['Quantity']||0)||0;
+  const downtime = Math.abs(parseFloat(findCol(r,['Down Time','Down time','Downtime','DownTime'])||0));
+  const remarks  = String(findCol(r,['Remarks','remarks','REMARKS'])||'').trim();
+  const length   = parseFloat(findCol(r,['Length','length'])||0)||0;
+  const qty      = parseFloat(findCol(r,['Quantity','quantity'])||0)||0;
 
   // Time components between the cycle phase markers
   const vacuum  = (vacMins!=null&&heatMins!=null) ? minsBetween(vacMins,heatMins)  : 0;
@@ -354,13 +367,13 @@ function buildBuckets(monthKey,dateFilter){
   const out={};
   if(!rawZjumbo) return out;
   rawZjumbo.forEach(r=>{
-    const mvt=String(r['Movment Type']||r['Movement Type']||r['Mvt type']||'').trim();
+    const mvt=String(findCol(r,['Movment Type','Movement Type','Movement type','Mvt type','Mvt Type'])||'').trim();
     if(mvt!=='101') return;
-    const mk=getMonthKey(r['Date of Production']||r['Date of production']);
+    const mk=getMonthKey(findCol(r,['Date of Production','Date of production','date of production']));
     if(mk!==monthKey) return;
-    const dateStr=getDateStr(r['Date of Production']||r['Date of production']);
+    const dateStr=getDateStr(findCol(r,['Date of Production','Date of production','date of production']));
     if(dateFilter&&dateStr!==dateFilter) return;
-    const machine=zjumboMachine(r['Machine']||r['machine']);
+    const machine=zjumboMachine(findCol(r,['Machine','machine']));
     if(!machine) return;
     const t=extractRollTimes(r);
     if(!t||!t.shift) return;
@@ -489,14 +502,39 @@ function render(){
     return;
   }
 
+  // ── DIAGNOSTIC: dump first row's keys + sample values to console ──
+  if(!window._tsDiagDone){
+    window._tsDiagDone=true;
+    const sample=rawZjumbo[0];
+    console.log('[TimeStudy] Total rows loaded:',rawZjumbo.length);
+    console.log('[TimeStudy] First row keys:',Object.keys(sample));
+    console.log('[TimeStudy] First row sample values:');
+    Object.entries(sample).forEach(([k,v])=>{
+      console.log('  ',JSON.stringify(k),'=',JSON.stringify(v),'  (type:'+typeof v+')');
+    });
+    // Count rows that pass the mvt-101 filter + date parse test
+    let mvt101=0, dateOk=0, machOk=0, timeOk=0;
+    rawZjumbo.forEach(r=>{
+      const mvtVal=findCol(r,['Movment Type','Movement Type','Movement type','Mvt type','Mvt Type']);
+      if(String(mvtVal).trim()==='101') mvt101++;
+      const dateVal=findCol(r,['Date of Production','Date of production','date of production']);
+      if(getMonthKey(dateVal)) dateOk++;
+      const mcVal=findCol(r,['Machine','machine']);
+      if(zjumboMachine(mcVal)) machOk++;
+      const coVal=findCol(r,['Chamber Open Time','Chamber open Time','Chamber open time']);
+      if(parseTimeToMins(coVal)!=null) timeOk++;
+    });
+    console.log(`[TimeStudy] Mvt-101: ${mvt101}/${rawZjumbo.length}, Date parseable: ${dateOk}, Machine parseable: ${machOk}, Time parseable: ${timeOk}`);
+  }
+
   // Populate date dropdown with available dates in selected month
   const allDates=new Set();
   rawZjumbo.forEach(r=>{
-    const mvt=String(r['Movment Type']||r['Movement Type']||'').trim();
+    const mvt=String(findCol(r,['Movment Type','Movement Type','Movement type','Mvt type','Mvt Type'])||'').trim();
     if(mvt!=='101') return;
-    const mk=getMonthKey(r['Date of Production']||r['Date of production']);
+    const mk=getMonthKey(findCol(r,['Date of Production','Date of production','date of production']));
     if(mk===selMonth){
-      const ds=getDateStr(r['Date of Production']||r['Date of production']);
+      const ds=getDateStr(findCol(r,['Date of Production','Date of production','date of production']));
       if(ds) allDates.add(ds);
     }
   });
@@ -827,9 +865,9 @@ function findAllMonths(){
   const months=new Set();
   if(!rawZjumbo) return [];
   rawZjumbo.forEach(r=>{
-    const mvt=String(r['Movment Type']||r['Movement Type']||'').trim();
+    const mvt=String(findCol(r,['Movment Type','Movement Type','Movement type','Mvt type','Mvt Type'])||'').trim();
     if(mvt!=='101') return;
-    const mk=getMonthKey(r['Date of Production']||r['Date of production']);
+    const mk=getMonthKey(findCol(r,['Date of Production','Date of production','date of production']));
     if(mk) months.add(mk);
   });
   return Array.from(months).sort();

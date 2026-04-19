@@ -299,22 +299,21 @@ function getMonthKey(d){const dt=parseDate(d);if(!dt)return null;return dt.getFu
 function getDateStr(d){const dt=parseDate(d);if(!dt)return null;return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}
 
 // Parse time value from Chamber Open Time — returns hour 0-23 or null
+// Parse time value → hour 0-23 or null
+// Ported from MetCost Pro's parseT to handle all XLSX.js output formats
 function parseHour(t){
   if(t==null||t===''||t===false) return null;
-  if(t instanceof Date) return t.getHours();
-  if(typeof t==='number'){
-    const f=t>=1?t-Math.floor(t):Math.abs(t);
-    return Math.floor(f*24)%24;
-  }
+  if(t instanceof Date){if(isNaN(t.getTime())) return null; return t.getHours();}
+  if(typeof t==='object'&&typeof t.getHours==='function') return t.getHours();
+  if(typeof t==='object'){try{const s=t.toString();if(s==='[object Object]') return null;const p=s.match(/(\d{1,2}):(\d{2})/);if(p){let h=+p[1];if(/pm/i.test(s)&&h<12)h+=12;if(/am/i.test(s)&&h===12)h=0;return h}}catch(e){}return null}
+  if(typeof t==='number'){if(isNaN(t)) return null;const f=t>=1?t-Math.floor(t):Math.abs(t);return Math.floor(f*24)%24;}
+  if(typeof t==='boolean') return null;
   const s=String(t).trim();
-  if(!s) return null;
-  const m=s.match(/(\d{1,2})\s*[:.\-]\s*(\d{2})\s*(AM|PM|am|pm)?/);
-  if(m){
-    let h=+m[1];
-    if(m[3]){const pm=m[3].toUpperCase()==='PM';if(pm&&h<12)h+=12;if(!pm&&h===12)h=0}
-    return h;
-  }
-  const n=parseFloat(s);if(!isNaN(n)&&n>=0&&n<1){return Math.floor(n*24)%24;}
+  if(!s||s==='NaN'||s==='null'||s==='undefined') return null;
+  const p=s.match(/(\d{1,2})\s*[:.\-]\s*(\d{2})(?:\s*[:.\-]\s*\d{2})?\s*(AM|PM|am|pm)?/i);
+  if(p){let h=+p[1];if(p[3]){const pm=p[3].toUpperCase()==='PM';if(pm&&h<12)h+=12;if(!pm&&h===12)h=0}return h;}
+  const nv=parseFloat(s);if(!isNaN(nv)&&nv>=0&&nv<1) return Math.floor(nv*24)%24;
+  try{const d=new Date(s);if(!isNaN(d.getTime())) return d.getHours();}catch(e){}
   return null;
 }
 function inferShift(hour){
