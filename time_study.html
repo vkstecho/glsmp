@@ -322,6 +322,9 @@ function findCol(row,variants){
 // ═══════════════════════════════════════════════════════════════
 // ROLL PARSING — extract per-roll time components
 // ═══════════════════════════════════════════════════════════════
+// Strip commas from formatted numbers like "3,216.080" → 3216.08
+function parseNum(v){return parseFloat(String(v||'0').replace(/,/g,''))||0;}
+
 function extractRollTimes(r){
   // Chamber Open Time — defines the shift bucket
   const coMins = parseTimeToMins(findCol(r,['Chamber Open Time','Chamber open Time','Chamber open time']));
@@ -335,15 +338,15 @@ function extractRollTimes(r){
   const ventMins = parseTimeToMins(findCol(r,['Vent time','Vent Time','Vent time ']));
 
   // Col P is a direct minute value (confirmed 25 matches 03:15→03:40)
-  let rco = Math.abs(parseFloat(findCol(r,['Roll Change over tim','Roll Change over time','Roll Changeover Time','Roll change over tim'])||0));
+  let rco = Math.abs(parseNum(findCol(r,['Roll Change over tim','Roll Change over time','Roll Changeover Time','Roll change over tim'])));
   if(isNaN(rco)) rco=0;
   // Fallback: if RCO missing, calculate from Chamber Open→Close
   if(rco===0 && ccMins!=null) rco = minsBetween(coMins,ccMins);
 
-  const downtime = Math.abs(parseFloat(findCol(r,['Down Time','Down time','Downtime','DownTime'])||0));
+  const downtime = Math.abs(parseNum(findCol(r,['Down Time','Down time','Downtime','DownTime'])));
   const remarks  = String(findCol(r,['Remarks','remarks','REMARKS'])||'').trim();
-  const length   = parseFloat(findCol(r,['Length','length'])||0)||0;
-  const qty      = parseFloat(findCol(r,['Quantity','quantity'])||0)||0;
+  const length   = parseNum(findCol(r,['Length','length']));
+  const qty      = parseNum(findCol(r,['Quantity','quantity']));
 
   // Time components between the cycle phase markers
   const vacuum  = (vacMins!=null&&heatMins!=null) ? minsBetween(vacMins,heatMins)  : 0;

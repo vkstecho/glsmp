@@ -397,6 +397,9 @@ function hasManpowerForMonth(monthKey){
 // ═══════════════════════════════════════════════════════════════
 // METALLISER: extract rolls + bucket + attribute to employees
 // ═══════════════════════════════════════════════════════════════
+// Strip commas from formatted numbers like "3,216.080" → 3216.08
+function parseNum(v){return parseFloat(String(v||'0').replace(/,/g,''))||0;}
+
 function buildMetRolls(monthKey){
   if(!rawData.zjumbo) return [];
   const out=[];
@@ -411,11 +414,11 @@ function buildMetRolls(monthKey){
     const hour=parseHour(r['Chamber Open Time']||r['Chamber open Time']);
     const shift=inferShift(hour);
     if(!shift) return;
-    const qty=Number(r['Quantity']||0);  // col H — output Kg per roll
-    const length=Number(r['Length']||0); // col G
-    const speed=Number(r['Machine Speed']||0); // col V
-    const rco=Number(r['Roll Change over tim']||r['Roll Change over time']||0); // col P
-    const dt=Number(r['Down Time']||0); // col AA
+    const qty=parseNum(r['Quantity']);  // col H — output Kg per roll
+    const length=parseNum(r['Length']); // col G
+    const speed=parseNum(r['Machine Speed']); // col V
+    const rco=parseNum(r['Roll Change over tim']||r['Roll Change over time']); // col P
+    const dt=parseNum(r['Down Time']); // col AA
     const remarks=String(r['Remarks']||'').toUpperCase();
     const isBoat=remarks.includes('BOAT');
     out.push({
@@ -442,7 +445,7 @@ function buildSlitRolls(monthKey){
     if(!machine) return;
     const shift=zslitShift(r['Shift']||r['shift']);
     if(!shift) return;
-    const nw=Number(r['Net Weight']||0);
+    const nw=parseNum(r['Net Weight']);
     const grade=String(r['Grade']||'').trim();
     const downGrade=String(r['Down Grade']||'').trim();
     out.push({
