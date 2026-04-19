@@ -1024,7 +1024,7 @@ function parseXL(file,cb,headerRow){
     const fr=new FileReader();
     fr.onerror=()=>{if(!dn){dn=true;clearTimeout(tmr);cb(null,null,null,'Read failed')}};
     fr.onload=e=>{const b=e.target.result;try{e.target.result=null}catch(x){}
-      w.postMessage({b:b,raw:sizeMB>15,one:sizeMB>15},[b])};
+      w.postMessage({b:b,raw:true,one:sizeMB>15},[b])};
     fr.readAsArrayBuffer(file);
     return;
   }
@@ -1058,9 +1058,9 @@ function _parseXLMain(file,cb,headerRow){
             const elecRow=scanForElectricity(ws);
             let data;
             if(elecRow>1){
-              data=XLSX.utils.sheet_to_json(ws,{defval:null,range:elecRow-1,raw:sizeMB>80});
+              data=XLSX.utils.sheet_to_json(ws,{defval:null,range:elecRow-1,raw:true});
             }else{
-              data=XLSX.utils.sheet_to_json(ws,{defval:null,raw:sizeMB>80});
+              data=XLSX.utils.sheet_to_json(ws,{defval:null,raw:true});
               if(!data||!data.length){
                 for(let rr=1;rr<=5;rr++){try{const d2=XLSX.utils.sheet_to_json(ws,{defval:null,range:rr});if(d2&&d2.length>5){data=d2;break}}catch(x){}}
               }
@@ -1101,12 +1101,12 @@ function _parseXLMain(file,cb,headerRow){
         }
       }
       if(_elecRow>0){
-        data=XLSX.utils.sheet_to_json(ws,{defval:null,range:_elecRow-1,raw:sizeMB>80});
+        data=XLSX.utils.sheet_to_json(ws,{defval:null,range:_elecRow-1,raw:true});
         console.log('[MetCost] Electricity detected at row '+_elecRow+', re-parsed: '+(data?data.length:0)+' rows');
       }else if(headerRow){
-        data=XLSX.utils.sheet_to_json(ws,{defval:null,range:headerRow-1,raw:sizeMB>80});
+        data=XLSX.utils.sheet_to_json(ws,{defval:null,range:headerRow-1,raw:true});
       }else{
-        data=XLSX.utils.sheet_to_json(ws,{defval:null,raw:sizeMB>80});
+        data=XLSX.utils.sheet_to_json(ws,{defval:null,raw:true});
       }
       wb.Sheets[wb.SheetNames[0]]=null;
       cb(data,wb,ws,null);
@@ -1226,7 +1226,12 @@ function handleMultiUpload(inp){
       if(multiFlag==='multi'&&Array.isArray(data)){
         data.forEach(sheet=>{
           const type=sheet.type;
-          const sData=trimData(sheet.data,type);
+          let sData=trimData(sheet.data,type);
+          // Convert Date objects to clean strings (same as single-sheet path)
+          const _dateCols2={zjumbo:['Date of Production','Chamber Open Date','Chamber Close Date'],zslit:['Date'],mb51:['Posting Date','Document Date'],electricity:['Date'],consSpares:['Posting Date','Document Date']};
+          const _timeCols2={zjumbo:['Chamber Open Time','Chamber Close Time','Vaccum time','Heating Time','Web Start Time','Web End Time','Vent time']};
+          const dC2=new Set(_dateCols2[type]||[]),tC2=new Set(_timeCols2[type]||[]);
+          if(dC2.size||tC2.size){sData.forEach(row=>{for(const k of Object.keys(row)){const v=row[k];if(v==null)continue;if(v instanceof Date&&!isNaN(v.getTime())){if(dC2.has(k)){row[k]=v.getUTCFullYear()+'-'+String(v.getUTCMonth()+1).padStart(2,'0')+'-'+String(v.getUTCDate()).padStart(2,'0')}else if(tC2.has(k)){row[k]=String(v.getUTCHours()).padStart(2,'0')+':'+String(v.getUTCMinutes()).padStart(2,'0')}}else if(typeof v==='number'&&v>40000&&dC2.has(k)){const d=new Date((v-25569)*86400000);if(!isNaN(d.getTime()))row[k]=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0')}}})}
           // Electricity & ConsSpares: REPLACE (latest file wins). Others: APPEND.
           const replaceTypes=['electricity','consSpares'];
           if(replaceTypes.includes(type)){
@@ -1279,15 +1284,41 @@ function handleMultiUpload(inp){
 
       if(type){
         data=trimData(data,type);
-        // Convert Excel serial dates to JS Date for raw-mode parsed files
-        if((_isMob&&file.size>15*1024*1024)||file.size>80*1024*1024){
-          const dateKeys=type==='zslit'?['Date']:type==='mb51'?['Posting Date']:type==='zjumbo'?['Date of Production','Chamber Open Date']:['Date'];
+        // ── Convert Date objects to clean strings ──
+        // With raw:true + cellDates:true, dates/times are JS Date objects in UTC.
+        // Convert to readable strings so IDB stores portable, timezone-safe values.
+        // Date columns → "YYYY-MM-DD", Time columns → "HH:MM" (24h), Numbers stay as numbers.
+        const _dateCols={
+          zjumbo:['Date of Production','Chamber Open Date','Chamber Close Date'],
+          zslit:['Date'],
+          mb51:['Posting Date','Document Date'],
+          electricity:['Date'],
+          consSpares:['Posting Date','Document Date'],
+        };
+        const _timeCols={
+          zjumbo:['Chamber Open Time','Chamber Close Time','Vaccum time','Heating Time','Web Start Time','Web End Time','Vent time'],
+        };
+        const dCols=new Set(_dateCols[type]||[]);
+        const tCols=new Set(_timeCols[type]||[]);
+        if(dCols.size||tCols.size){
           data.forEach(row=>{
-            dateKeys.forEach(k=>{
-              if(row[k]&&typeof row[k]==='number'&&row[k]>40000){
-                row[k]=new Date((row[k]-25569)*86400000);
+            for(const k of Object.keys(row)){
+              const v=row[k];
+              if(v==null) continue;
+              if(v instanceof Date && !isNaN(v.getTime())){
+                if(dCols.has(k)){
+                  // Date column → "YYYY-MM-DD" using UTC to avoid timezone shift
+                  row[k]=v.getUTCFullYear()+'-'+String(v.getUTCMonth()+1).padStart(2,'0')+'-'+String(v.getUTCDate()).padStart(2,'0');
+                }else if(tCols.has(k)){
+                  // Time column → "HH:MM" using UTC (XLSX.js stores times in UTC)
+                  row[k]=String(v.getUTCHours()).padStart(2,'0')+':'+String(v.getUTCMinutes()).padStart(2,'0');
+                }
+              }else if(typeof v==='number' && v>40000 && dCols.has(k)){
+                // Legacy: Excel serial date (shouldn't happen with cellDates:true, but just in case)
+                const d=new Date((v-25569)*86400000);
+                if(!isNaN(d.getTime())) row[k]=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
               }
-            });
+            }
           });
         }
         // Electricity & ConsSpares: REPLACE (latest file wins, dedup by date)
