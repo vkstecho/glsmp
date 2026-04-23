@@ -803,17 +803,19 @@ body.light .learn-screen [style*="color:var(--text)"] { color:#fff !important; -
 /* ── Multi-cell selection ── */
 .sched-tbl td.cell-selected span.shc{outline:2px solid #a78bfa !important;box-shadow:0 0 8px rgba(167,139,250,.7) !important;border-radius:4px;}
 .sched-tbl td.cell-selected{background:rgba(167,139,250,.12) !important;}
-#multiSelectBar{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:200;
+#multiSelectBar{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:200;
   background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid rgba(167,139,250,.5);
-  border-radius:18px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+  border-radius:18px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,.6);
   display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:96vw;}
 #multiSelectBar .ms-count{font-size:12px;font-weight:900;color:#a78bfa;white-space:nowrap;padding:0 4px;}
 #multiSelectBar .ms-btn{width:36px;height:32px;border-radius:8px;border:none;cursor:pointer;
   font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;
   font-family:inherit;transition:transform .1s;}
 #multiSelectBar .ms-btn:active{transform:scale(.92);}
-#multiSelectBar .ms-cancel{padding:6px 14px;border-radius:8px;border:1px solid rgba(167,139,250,.4);
-  background:none;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+#multiSelectBar .ms-cancel{padding:10px 20px;border-radius:10px;border:1.5px solid rgba(244,63,94,.5);
+  background:rgba(244,63,94,.12);color:#fca5a5;font-size:13px;font-weight:800;cursor:pointer;
+  font-family:inherit;width:100%;margin-top:4px;touch-action:manipulation;
+  -webkit-tap-highlight-color:rgba(244,63,94,.2);}
 .sched-tbl td{padding:6px 3px;border-bottom:1px solid var(--border);vertical-align:middle;text-align:center;-webkit-tap-highlight-color:transparent;}
 .sched-tbl td.ecol{text-align:left;padding:6px 8px;position:sticky;left:0;z-index:2;background:#080e18;min-width:110px;max-width:125px;box-shadow:3px 0 8px rgba(0,0,0,.6);overflow:hidden;}
 .sched-tbl tr:hover td.ecol{background:#162336;}
@@ -2276,6 +2278,13 @@ setTimeout(_forceLogin, 10000);
       <div class="hdr-brand"><span>M·P</span> मेटलाइज़र</div>
     </div>
     <div class="hdr-right">
+      <div id="langToggleBtn" onclick="toggleLang()" title="Language: हिंदी / English"
+        style="display:flex;align-items:center;justify-content:center;
+               width:38px;height:38px;border-radius:10px;cursor:pointer;
+               background:var(--card2);border:1px solid var(--border2);font-size:12px;
+               font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--text)">
+        EN
+      </div>
       <div id="themeToggleBtn" onclick="toggleTheme()" title="Dark/Light Mode"
         style="display:flex;align-items:center;justify-content:center;
                width:38px;height:38px;border-radius:10px;cursor:pointer;
@@ -2445,7 +2454,7 @@ setTimeout(_forceLogin, 10000);
       <button class="ms-btn" style="background:#7f1d1d;color:#fca5a5" onclick="applyMultiShift('Ab')" style="font-size:10px">Ab</button>
       <button class="ms-btn" style="background:#ea580c;color:#fff" onclick="applyMultiShift('H')">H</button>
     </div>
-    <button class="ms-cancel" onclick="clearMultiSelect()">✕ रद्द</button>
+    <button class="ms-cancel" onclick="clearMultiSelect()">✕ रद्द करें · Cancel</button>
   </div>
 
   <!-- ══ PENDING CHANGES SAVE BAR ══ -->
@@ -4202,6 +4211,114 @@ function updateThemeIcon(){
   if(btn) btn.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
 }
 initTheme();
+
+// ══════════════════════════════════════════
+// LANGUAGE TOGGLE (Hindi ↔ English)
+// ══════════════════════════════════════════
+let _lang = localStorage.getItem('mp_lang') || 'hi';
+
+function toggleLang(){
+  _lang = (_lang === 'hi') ? 'en' : 'hi';
+  localStorage.setItem('mp_lang', _lang);
+  applyLang();
+  // Re-build nav to update tab labels
+  buildNav().then(()=>{ goTab(_currentTab); });
+}
+
+function applyLang(){
+  const btn = document.getElementById('langToggleBtn');
+  if(btn) btn.textContent = _lang === 'hi' ? 'EN' : 'हि';
+
+  // Header brand
+  const brand = document.querySelector('.hdr-brand');
+  if(brand) brand.innerHTML = _lang==='en'
+    ? '<span>M·P</span> Metalliser'
+    : '<span>M·P</span> मेटलाइज़र';
+
+  // Sync row
+  const syncRow = document.getElementById('syncRow');
+  if(syncRow){
+    const syncSpan = syncRow.querySelector('span');
+    if(syncSpan){
+      const timeMatch = syncSpan.textContent.match(/\d{1,2}:\d{2}\s*(am|pm|AM|PM)/);
+      const timeStr = timeMatch ? timeMatch[0] : '';
+      syncSpan.innerHTML = _lang==='en'
+        ? `🔄 Live Sync · Last Update: ${timeStr}`
+        : `🔄 लाइव सिंक · अंतिम अपडेट: ${timeStr}`;
+    }
+  }
+
+  // Schedule admin buttons (update visible text only, keep onclick)
+  const _btnMap = {
+    'schedBuildBtn':    {hi:'📋 Schedule बनाएं', en:'📋 Create Schedule'},
+    'printBtn':         {hi:'🖨️ प्रिंट', en:'🖨️ Print'},
+    'excelBtn':         {hi:'📊 Excel', en:'📊 Excel'},
+    'empUploadBtn':     {hi:'📤 Shift Upload', en:'📤 Shift Upload'},
+    'msToggleBtn':      {hi:'☑️ Multi-Select', en:'☑️ Multi-Select'},
+  };
+  Object.entries(_btnMap).forEach(([id, txt])=>{
+    const el = document.getElementById(id);
+    if(el && !el.classList.contains('on')){
+      // Only update if not in active select mode
+      if(id === 'msToggleBtn' && _msActive) return;
+      el.textContent = _lang==='en' ? txt.en : txt.hi;
+    }
+  });
+
+  // Custom date button
+  const cdBtn = document.querySelector('[onclick="openCustomRange()"]');
+  if(cdBtn) cdBtn.textContent = _lang==='en' ? '🗓️ Select Custom Date' : '🗓️ कस्टम तारीख चुनें';
+
+  // Reset range button
+  const rrBtn = document.getElementById('resetRangeBtn');
+  if(rrBtn) rrBtn.textContent = _lang==='en' ? '✕ Reset' : '✕ Reset';
+
+  // Section filter tabs
+  const secBtns = document.querySelectorAll('.sec-filter-btn, [onclick*="filterSec"]');
+  secBtns.forEach(b=>{
+    const val = b.dataset.sec || b.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
+    if(val === 'ALL') b.textContent = _lang==='en' ? 'All' : 'सभी';
+  });
+
+  // Schedule legend labels
+  document.querySelectorAll('.sched-legend-lbl').forEach(el=>{
+    const key = el.dataset.legendKey;
+    if(!key) return;
+    const map = {
+      'D':   {hi:'दिन', en:'Day'},
+      'N':   {hi:'रात', en:'Night'},
+      'HLF': {hi:'Half Day', en:'Half Day'},
+      'Ab':  {hi:'अनुपस्थित', en:'Absent'},
+      'O':   {hi:'ऑफ', en:'Off'},
+      'L':   {hi:'छुट्टी', en:'Leave'},
+      'G':   {hi:'जनरल', en:'General'},
+      'GP':  {hi:'जनरल+', en:'General+'},
+      'CO':  {hi:'C/O', en:'C/O'},
+      'H':   {hi:'छुट्टी (H)', en:'Holiday'},
+    };
+    if(map[key]) el.textContent = _lang==='en' ? map[key].en : map[key].hi;
+  });
+
+  // Home screen stat labels
+  const statMap = {'dayStatLbl':{hi:'दिन शिफ्ट',en:'Day Shift'},'nightStatLbl':{hi:'रात शिफ्ट',en:'Night Shift'},'leaveStatLbl':{hi:'छुट्टी पर',en:'On Leave'}};
+  Object.entries(statMap).forEach(([id,txt])=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = _lang==='en' ? txt.en : txt.hi;
+  });
+
+  // Learn/Grow bar
+  const learnBar = document.querySelector('.learn-hdr-bar');
+  if(learnBar){
+    const learnTxt = learnBar.querySelector('.learn-hdr-text');
+    if(learnTxt){
+      learnTxt.innerHTML = _lang==='en'
+        ? '<b>🚀 Learn & Grow</b>&nbsp; Met Train · Skills · AI Tools'
+        : '<b>🚀 सीखें & Grow करें</b>&nbsp; Met Train · Skills · AI Tools';
+    }
+  }
+}
+// Apply on boot
+setTimeout(applyLang, 200);
 function isAdmin(){ return SESSION.role==='admin'; }
 function isMgr(){ 
   if(SESSION.role==='admin') return false;
@@ -5887,13 +6004,13 @@ async function launchApp(){
 async function buildNav(){
   // ── ALL POSSIBLE TABS (master list) ──
   const ALL_TABS = [
-    {id:'home',      ico:'🏠', lbl:'होम',       roles:['admin','worker','guest','manager','supervisor']},
-    {id:'schedule',  ico:'📅', lbl:'शेड्यूल',   roles:['admin','worker','manager','supervisor']},
-    {id:'leave',     ico:'🏖️', lbl:'अवकाश',    roles:['admin','worker','manager']},
-    {id:'reports',   ico:'📋', lbl:'रिपोर्ट',   roles:['admin','worker','manager','supervisor']},
-    {id:'todo',      ico:'✅', lbl:'To-Do',      roles:['admin','guest','worker','manager','supervisor']},
-    {id:'pending',   ico:'⏳', lbl:'पेंडिंग',   roles:['admin','manager']},
-    {id:'team',      ico:'👥', lbl:'टीम',        roles:['admin','manager']},
+    {id:'home',      ico:'🏠', lbl:'होम',       lblEn:'Home',      roles:['admin','worker','guest','manager','supervisor']},
+    {id:'schedule',  ico:'📅', lbl:'शेड्यूल',   lblEn:'Schedule',  roles:['admin','worker','manager','supervisor']},
+    {id:'leave',     ico:'🏖️', lbl:'अवकाश',    lblEn:'Leave',     roles:['admin','worker','manager']},
+    {id:'reports',   ico:'📋', lbl:'रिपोर्ट',   lblEn:'Reports',   roles:['admin','worker','manager','supervisor']},
+    {id:'todo',      ico:'✅', lbl:'To-Do',      lblEn:'To-Do',     roles:['admin','guest','worker','manager','supervisor']},
+    {id:'pending',   ico:'⏳', lbl:'पेंडिंग',   lblEn:'Pending',   roles:['admin','manager']},
+    {id:'team',      ico:'👥', lbl:'टीम',        lblEn:'Team',      roles:['admin','manager']},
   ];
 
   // ── DYNAMIC GUEST TAB VISIBILITY (admin-controlled via Firebase) ──
@@ -5933,12 +6050,14 @@ async function buildNav(){
   const syncRow = document.getElementById('syncRow');
   if(syncRow) syncRow.style.display = isGuest() ? 'none' : '';
 
-  document.getElementById('mainNav').innerHTML = tabs.map((t,i)=>`
-    <button class="nb${i===0?' on':''}" id="nb-${t.id}" onclick="goTab('${t.id}')" aria-label="${t.lbl}">
-      <span class="nb-ico">${t.ico}</span><span style="font-size:14px;font-weight:800">${t.lbl}</span>
+  document.getElementById('mainNav').innerHTML = tabs.map((t,i)=>{
+    const label = (typeof _lang !== 'undefined' && _lang === 'en') ? (t.lblEn||t.lbl) : t.lbl;
+    return `<button class="nb${i===0?' on':''}" id="nb-${t.id}" onclick="goTab('${t.id}')" aria-label="${label}">
+      <span class="nb-ico">${t.ico}</span><span style="font-size:14px;font-weight:800">${label}</span>
       ${t.id==='pending'?'<span class="nb-badge" id="pendingBadge" style="display:none">0</span>':''}
       ${t.id==='todo'?'<span class="nb-badge" id="todoBadge" style="display:none">0</span>':''}
-    </button>`).join('');
+    </button>`;
+  }).join('');
 
   // ── PC Sidebar: mirror the same tabs with sidebar button style ──
   const sidebar = document.getElementById('pcSidebar');
@@ -5952,8 +6071,9 @@ async function buildNav(){
       const btn = document.createElement('button');
       btn.className = 'pc-nav-btn' + (i===0?' on':'');
       btn.id = 'pc-nb-'+t.id;
-      btn.setAttribute('aria-label', t.lbl);
-      btn.innerHTML = `<span class="pc-nav-ico">${t.ico}</span><span class="pc-nav-lbl">${t.lbl}</span>`
+      btn.setAttribute('aria-label', (typeof _lang !== 'undefined' && _lang === 'en') ? (t.lblEn||t.lbl) : t.lbl);
+      const sLabel = (typeof _lang !== 'undefined' && _lang === 'en') ? (t.lblEn||t.lbl) : t.lbl;
+      btn.innerHTML = `<span class="pc-nav-ico">${t.ico}</span><span class="pc-nav-lbl">${sLabel}</span>`
         + (t.id==='pending' ? `<span class="pc-nav-badge" id="pcPendingBadge" style="display:none">0</span>` : '')
         + (t.id==='todo'    ? `<span class="pc-nav-badge" id="pcTodoBadge" style="display:none">0</span>` : '');
       btn.onclick = ()=>goTab(t.id);
@@ -6360,9 +6480,9 @@ async function renderHome(){
     document.getElementById('homeDateLbl').textContent =
       TODAY_DATE.toLocaleDateString('hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     document.getElementById('homeStats').innerHTML=`
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl">दिन शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl">रात शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl">छुट्टी पर</div></div>`;
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="dayStatLbl">दिन शिफ्ट</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="nightStatLbl">रात शिफ्ट</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="leaveStatLbl">छुट्टी पर</div></div>`;
     document.getElementById('homeSections').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted2)">🔄 Firebase से डेटा लोड हो रहा है...</div>';
     document.getElementById('homeRoster').innerHTML='';
     return;
@@ -6382,9 +6502,9 @@ async function renderHome(){
     const lvE =emps.filter(e=>getShift(e,TODAY_STR)==='L').length;
 
     document.getElementById('homeStats').innerHTML=`
-      <div class="stat-card"><div class="stat-val" style="color:var(--day)">${dayE}</div><div class="stat-lbl">दिन शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--night)">${nE}</div><div class="stat-lbl">रात शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--lv)">${lvE}</div><div class="stat-lbl">छुट्टी पर</div></div>`;
+      <div class="stat-card"><div class="stat-val" style="color:var(--day)">${dayE}</div><div class="stat-lbl" id="dayStatLbl">${_lang==='en'?'Day Shift':'दिन शिफ्ट'}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--night)">${nE}</div><div class="stat-lbl" id="nightStatLbl">${_lang==='en'?'Night Shift':'रात शिफ्ट'}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--lv)">${lvE}</div><div class="stat-lbl" id="leaveStatLbl">${_lang==='en'?'On Leave':'छुट्टी पर'}</div></div>`;
 
     document.getElementById('homeSections').innerHTML = Object.entries(SEC).map(([k,s])=>{
       const members=emps.filter(e=>e.sec===k && e.status!=='resigned');
