@@ -2278,10 +2278,10 @@ setTimeout(_forceLogin, 10000);
       <div class="hdr-brand"><span>M·P</span> मेटलाइज़र</div>
     </div>
     <div class="hdr-right">
-      <div id="langToggleBtn" onclick="toggleLang()" title="Language: हिंदी / English"
+      <div id="langToggleBtn" onclick="toggleLang()" title="हिंदी / English"
         style="display:flex;align-items:center;justify-content:center;
                width:38px;height:38px;border-radius:10px;cursor:pointer;
-               background:var(--card2);border:1px solid var(--border2);font-size:12px;
+               background:var(--card2);border:1px solid var(--border2);font-size:13px;
                font-weight:900;font-family:'Barlow Condensed',sans-serif;color:var(--text)">
         EN
       </div>
@@ -2315,14 +2315,13 @@ setTimeout(_forceLogin, 10000);
   <div class="learn-hdr-bar">
     <button class="learn-hdr-btn" onclick="openLearnScreen()">
       <span style="font-size:20px">🚀</span>
-      <span style="font-weight:900">सीखें & Grow करें</span>
+      <span style="font-weight:900" id="learnBarTitle">सीखें & Grow करें</span>
       <span style="font-size:11px;opacity:1;font-weight:700;color:rgba(255,255,255,.9)">Met Train · Skills · AI Tools</span>
       <span style="margin-left:auto;font-size:13px;opacity:1">›</span>
     </button>
   </div>
   <div class="sync-row" id="syncRow">
-    <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0115.9-2.7M20 15a9 9 0 01-15.9 2.7" stroke-width="2.5" stroke-linecap="round"/></svg>
-    <span>लाइव सिंक</span> · अंतिम अपडेट: <span id="syncTime">—</span>
+    <span id="syncLabel">🔄 लाइव सिंक · अंतिम अपडेट:</span> <span id="syncTime">—</span>
   </div>
   <nav class="nav" id="mainNav"></nav>
 </div>
@@ -2345,7 +2344,7 @@ setTimeout(_forceLogin, 10000);
   <!-- Admin sees full stats; Workers see personal shift -->
   <div id="homeAdminView">
     <div class="stats-grid" id="homeStats"></div>
-    <div class="stitle">आज की स्थिति — सेक्शन वार</div>
+    <div class="stitle" id="homeSectionTitle">आज की स्थिति — सेक्शन वार</div>
     <div id="homeSections"></div>
     <div class="stitle">आज का रोस्टर</div>
     <div id="homeRoster"></div>
@@ -4221,11 +4220,11 @@ function toggleLang(){
   _lang = (_lang === 'hi') ? 'en' : 'hi';
   localStorage.setItem('mp_lang', _lang);
   applyLang();
-  // Re-build nav to update tab labels
   buildNav().then(()=>{ goTab(_currentTab); });
 }
 
 function applyLang(){
+  // Toggle button label
   const btn = document.getElementById('langToggleBtn');
   if(btn) btn.textContent = _lang === 'hi' ? 'EN' : 'हि';
 
@@ -4236,88 +4235,44 @@ function applyLang(){
     : '<span>M·P</span> मेटलाइज़र';
 
   // Sync row
-  const syncRow = document.getElementById('syncRow');
-  if(syncRow){
-    const syncSpan = syncRow.querySelector('span');
-    if(syncSpan){
-      const timeMatch = syncSpan.textContent.match(/\d{1,2}:\d{2}\s*(am|pm|AM|PM)/);
-      const timeStr = timeMatch ? timeMatch[0] : '';
-      syncSpan.innerHTML = _lang==='en'
-        ? `🔄 Live Sync · Last Update: ${timeStr}`
-        : `🔄 लाइव सिंक · अंतिम अपडेट: ${timeStr}`;
-    }
-  }
+  const syncLbl = document.getElementById('syncLabel');
+  if(syncLbl) syncLbl.textContent = _lang==='en'
+    ? '🔄 Live Sync · Last Update:'
+    : '🔄 लाइव सिंक · अंतिम अपडेट:';
 
-  // Schedule admin buttons (update visible text only, keep onclick)
-  const _btnMap = {
-    'schedBuildBtn':    {hi:'📋 Schedule बनाएं', en:'📋 Create Schedule'},
-    'printBtn':         {hi:'🖨️ प्रिंट', en:'🖨️ Print'},
-    'excelBtn':         {hi:'📊 Excel', en:'📊 Excel'},
-    'empUploadBtn':     {hi:'📤 Shift Upload', en:'📤 Shift Upload'},
-    'msToggleBtn':      {hi:'☑️ Multi-Select', en:'☑️ Multi-Select'},
+  // Section status heading
+  const secTitle = document.getElementById('homeSectionTitle');
+  if(secTitle) secTitle.textContent = _lang==='en'
+    ? "Today's Status — Section Wise"
+    : 'आज की स्थिति — सेक्शन वार';
+
+  // Learn bar
+  const learnTitle = document.getElementById('learnBarTitle');
+  if(learnTitle) learnTitle.textContent = _lang==='en' ? 'Learn & Grow' : 'सीखें & Grow करें';
+
+  // Home stat labels
+  const statMap = {
+    'dayStatLbl':  {hi:'दिन शिफ्ट', en:'Day Shift'},
+    'nightStatLbl':{hi:'रात शिफ्ट', en:'Night Shift'},
+    'leaveStatLbl':{hi:'छुट्टी पर',  en:'On Leave'}
   };
-  Object.entries(_btnMap).forEach(([id, txt])=>{
+  Object.entries(statMap).forEach(([id,txt])=>{
     const el = document.getElementById(id);
-    if(el && !el.classList.contains('on')){
-      // Only update if not in active select mode
-      if(id === 'msToggleBtn' && _msActive) return;
-      el.textContent = _lang==='en' ? txt.en : txt.hi;
-    }
+    if(el) el.textContent = _lang==='en' ? txt.en : txt.hi;
   });
 
-  // Custom date button
-  const cdBtn = document.querySelector('[onclick="openCustomRange()"]');
-  if(cdBtn) cdBtn.textContent = _lang==='en' ? '🗓️ Select Custom Date' : '🗓️ कस्टम तारीख चुनें';
-
-  // Reset range button
-  const rrBtn = document.getElementById('resetRangeBtn');
-  if(rrBtn) rrBtn.textContent = _lang==='en' ? '✕ Reset' : '✕ Reset';
-
-  // Section filter tabs
+  // Section filter "सभी" button
   const secBtns = document.querySelectorAll('.sec-filter-btn, [onclick*="filterSec"]');
   secBtns.forEach(b=>{
     const val = b.dataset.sec || b.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
     if(val === 'ALL') b.textContent = _lang==='en' ? 'All' : 'सभी';
   });
 
-  // Schedule legend labels
-  document.querySelectorAll('.sched-legend-lbl').forEach(el=>{
-    const key = el.dataset.legendKey;
-    if(!key) return;
-    const map = {
-      'D':   {hi:'दिन', en:'Day'},
-      'N':   {hi:'रात', en:'Night'},
-      'HLF': {hi:'Half Day', en:'Half Day'},
-      'Ab':  {hi:'अनुपस्थित', en:'Absent'},
-      'O':   {hi:'ऑफ', en:'Off'},
-      'L':   {hi:'छुट्टी', en:'Leave'},
-      'G':   {hi:'जनरल', en:'General'},
-      'GP':  {hi:'जनरल+', en:'General+'},
-      'CO':  {hi:'C/O', en:'C/O'},
-      'H':   {hi:'छुट्टी (H)', en:'Holiday'},
-    };
-    if(map[key]) el.textContent = _lang==='en' ? map[key].en : map[key].hi;
-  });
-
-  // Home screen stat labels
-  const statMap = {'dayStatLbl':{hi:'दिन शिफ्ट',en:'Day Shift'},'nightStatLbl':{hi:'रात शिफ्ट',en:'Night Shift'},'leaveStatLbl':{hi:'छुट्टी पर',en:'On Leave'}};
-  Object.entries(statMap).forEach(([id,txt])=>{
-    const el = document.getElementById(id);
-    if(el) el.textContent = _lang==='en' ? txt.en : txt.hi;
-  });
-
-  // Learn/Grow bar
-  const learnBar = document.querySelector('.learn-hdr-bar');
-  if(learnBar){
-    const learnTxt = learnBar.querySelector('.learn-hdr-text');
-    if(learnTxt){
-      learnTxt.innerHTML = _lang==='en'
-        ? '<b>🚀 Learn & Grow</b>&nbsp; Met Train · Skills · AI Tools'
-        : '<b>🚀 सीखें & Grow करें</b>&nbsp; Met Train · Skills · AI Tools';
-    }
+  // Re-render home if on home tab
+  if(typeof _currentTab !== 'undefined' && _currentTab === 'home'){
+    try{ renderHome(); }catch(e){}
   }
 }
-// Apply on boot
 setTimeout(applyLang, 200);
 function isAdmin(){ return SESSION.role==='admin'; }
 function isMgr(){ 
@@ -6071,8 +6026,8 @@ async function buildNav(){
       const btn = document.createElement('button');
       btn.className = 'pc-nav-btn' + (i===0?' on':'');
       btn.id = 'pc-nb-'+t.id;
-      btn.setAttribute('aria-label', (typeof _lang !== 'undefined' && _lang === 'en') ? (t.lblEn||t.lbl) : t.lbl);
       const sLabel = (typeof _lang !== 'undefined' && _lang === 'en') ? (t.lblEn||t.lbl) : t.lbl;
+      btn.setAttribute('aria-label', sLabel);
       btn.innerHTML = `<span class="pc-nav-ico">${t.ico}</span><span class="pc-nav-lbl">${sLabel}</span>`
         + (t.id==='pending' ? `<span class="pc-nav-badge" id="pcPendingBadge" style="display:none">0</span>` : '')
         + (t.id==='todo'    ? `<span class="pc-nav-badge" id="pcTodoBadge" style="display:none">0</span>` : '');
@@ -6478,18 +6433,18 @@ async function renderHome(){
   }
   if(!emps || emps.length===0){
     document.getElementById('homeDateLbl').textContent =
-      TODAY_DATE.toLocaleDateString('hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      TODAY_DATE.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
     document.getElementById('homeStats').innerHTML=`
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="dayStatLbl">दिन शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="nightStatLbl">रात शिफ्ट</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="leaveStatLbl">छुट्टी पर</div></div>`;
-    document.getElementById('homeSections').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted2)">🔄 Firebase से डेटा लोड हो रहा है...</div>';
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="dayStatLbl">${_lang==='en'?'Day Shift':'दिन शिफ्ट'}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="nightStatLbl">${_lang==='en'?'Night Shift':'रात शिफ्ट'}</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--muted)">...</div><div class="stat-lbl" id="leaveStatLbl">${_lang==='en'?'On Leave':'छुट्टी पर'}</div></div>`;
+    document.getElementById('homeSections').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted2)">🔄 '+(_lang==='en'?'Loading data from Firebase...':'Firebase से डेटा लोड हो रहा है...')+'</div>';
     document.getElementById('homeRoster').innerHTML='';
     return;
   }
 
   document.getElementById('homeDateLbl').textContent =
-    TODAY_DATE.toLocaleDateString('hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    TODAY_DATE.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   if(isAdminOrMgr()){
     // ── ADMIN/MANAGER: full team overview ──
@@ -6518,13 +6473,13 @@ async function renderHome(){
         <div style="display:flex;align-items:center;gap:12px">
           <div class="sec-icon" style="background:${s.bg}">${s.icon}</div>
           <div>
-            <div class="sec-name" style="color:${s.color}">${s.hi}${warn?'<span class="warning-dot" style="margin-left:6px"></span>':''}</div>
+            <div class="sec-name" style="color:${s.color}">${_lang==='en'?s.label:s.hi}${warn?'<span class="warning-dot" style="margin-left:6px"></span>':''}</div>
             <div class="sec-machine">${s.machine}</div>
           </div>
         </div>
         <div>
           <div class="sec-count" style="color:${warn?'var(--lv)':s.color}">${duty}/${members.length}</div>
-          <div class="sec-count-lbl" style="font-size:10px">${warn?'⚠️ कम':'ड्यूटी'} <span style="color:var(--day)">${dayCount}D</span> <span style="color:var(--night)">${nightCount}N</span></div>
+          <div class="sec-count-lbl" style="font-size:10px">${warn?(_lang==='en'?'⚠️ Low':'⚠️ कम'):(_lang==='en'?'Duty':'ड्यूटी')} <span style="color:var(--day)">${dayCount}D</span> <span style="color:var(--night)">${nightCount}N</span></div>
         </div>
       </div>`;
     }).join('');
@@ -6576,7 +6531,7 @@ async function renderHome(){
     const lastDay = new Date(year, month+1, 0);
     const startDow = firstDay.getDay(); // 0=Sun
     const DAYS_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-    const monthName = now.toLocaleDateString('hi-IN',{month:'long',year:'numeric'});
+    const monthName = now.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
 
     let calHtml = `<div style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px;margin-bottom:14px">
       <div style="text-align:center;font-size:26px;font-weight:900;color:#fff;margin-bottom:14px;letter-spacing:.3px">${monthName}</div>
@@ -12676,7 +12631,7 @@ function openScheduleBuilder(){
   for(let i=-1; i<=6; i++){
     const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
     const key = d.toISOString().substring(0,7);
-    const label = d.toLocaleDateString('hi-IN',{month:'long',year:'numeric'});
+    const label = d.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
     months.push({key, label});
   }
   const monthOpts = months.map(m=>`<option value="${m.key}"${m.key===defaultKey?' selected':''}>${m.label}</option>`).join('');
@@ -12709,10 +12664,11 @@ async function loadScheduleBuilder(){
   const daysInMonth = new Date(yr, mo, 0).getDate();
   const dayNums = Array.from({length: daysInMonth}, (_,i)=>i+1);
 
-  // Load existing saved schedule if any
-  const saved = getSchedules()[monthKey.replace('-','_')] || {};
+  // Load existing saved schedule if any — guard against null/undefined
+  const allScheds = getSchedules() || {};
+  const saved = allScheds[monthKey.replace('-','_')] || {};
   
-  let emps = getEmps().filter(e => e.status !== 'resigned');
+  let emps = (getEmps() || []).filter(e => e && e.status !== 'resigned');
   if(secFilter !== 'ALL') emps = emps.filter(e => e.sec === secFilter);
 
   // Build grid
@@ -12723,18 +12679,28 @@ async function loadScheduleBuilder(){
   }).join('');
 
   const rows = emps.map(emp => {
-    const empSaved = saved[emp.id] || Array(daysInMonth).fill('');
-    const empWoffDow = emp.woff ? WOFF_DOW[emp.woff] : -1;
+    if(!emp || !emp.id) return '';
+    // Ensure empSaved is always an array (Firebase converts arrays to objects)
+    let empSaved = saved[emp.id];
+    if(empSaved && !Array.isArray(empSaved)){
+      empSaved = Array.from({length: daysInMonth}, (_,i) => empSaved[i] || empSaved[String(i)] || '');
+    }
+    if(!empSaved) empSaved = Array(daysInMonth).fill('');
+    
+    const empWoffDow = emp.woff ? (WOFF_DOW[emp.woff] ?? -1) : -1;
     
     // Build approved leave dates for this employee in this month
     const empLeaves = new Set();
-    getLeaves().filter(l => l.status === 'approved' && l.empId === emp.id).forEach(l => {
-      const fromD = new Date(l.from);
-      const toD = new Date(l.to);
-      for(let dd = new Date(fromD); dd <= toD; dd.setDate(dd.getDate() + 1)){
-        empLeaves.add(dd.toISOString().slice(0, 10));
-      }
-    });
+    try{
+      (getLeaves()||[]).filter(l => l && l.status === 'approved' && l.empId === emp.id && l.from && l.to).forEach(l => {
+        const fromD = new Date(l.from);
+        const toD = new Date(l.to);
+        if(isNaN(fromD.getTime()) || isNaN(toD.getTime())) return;
+        for(let dd = new Date(fromD); dd <= toD; dd.setDate(dd.getDate() + 1)){
+          empLeaves.add(dd.toISOString().slice(0, 10));
+        }
+      });
+    }catch(leaveErr){ console.warn('Leave parse error for', emp.id, leaveErr); }
     
     const cells = dayNums.map((d,i) => {
       const dateStr = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -12774,7 +12740,7 @@ async function loadScheduleBuilder(){
     </tr>`;
   }).join('');
 
-  const monthLabel = new Date(yr, mo-1, 1).toLocaleDateString('hi-IN',{month:'long',year:'numeric'});
+  const monthLabel = new Date(yr, mo-1, 1).toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
 
   openModal(`<div class="modal-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -12846,7 +12812,7 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
   ];
 
   // Also check Firebase schedules (may have future months saved)
-  const fbScheds = getSchedules();
+  const fbScheds = getSchedules() || {};
 
   // Build list of months to scan backwards from (targetYr_targetMo - 1)
   let scanYr = targetYr, scanMo = targetMo - 1;
@@ -12858,8 +12824,9 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
 
     // Check Firebase saved first
     if(fbScheds[mk] && fbScheds[mk][emp.id]){
-      const arr = fbScheds[mk][emp.id];
-      for(let d = daysInScanMo - 1; d >= 0; d--){
+      let arr = fbScheds[mk][emp.id];
+      if(arr && !Array.isArray(arr)) arr = Object.values(arr);
+      if(arr) for(let d = daysInScanMo - 1; d >= 0; d--){
         const sh = arr[d];
         if(sh === 'D' || sh === 'N') return sh;
       }
@@ -12902,10 +12869,11 @@ function autoGenSchedule(monthKey){
 
   // ── Build approved leave map: { empId: Set of 'YYYY-MM-DD' strings } ──
   const leaveMap = {};
-  getLeaves().filter(l => l.status === 'approved').forEach(l => {
+  (getLeaves()||[]).filter(l => l && l.status === 'approved' && l.empId && l.from && l.to).forEach(l => {
     if(!leaveMap[l.empId]) leaveMap[l.empId] = new Set();
     const fromD = new Date(l.from);
     const toD = new Date(l.to);
+    if(isNaN(fromD.getTime()) || isNaN(toD.getTime())) return;
     for(let d = new Date(fromD); d <= toD; d.setDate(d.getDate() + 1)){
       leaveMap[l.empId].add(d.toISOString().slice(0, 10));
     }
@@ -13044,7 +13012,7 @@ async function saveScheduleBuilder(monthKey){
   });
   
   // Merge with existing saved data (for sections not loaded)
-  const existing = getSchedules()[monthKey] || {};
+  const existing = (getSchedules() || {})[monthKey.replace('-','_')] || {};
   const merged = {...existing, ...schedData};
   
   try{
