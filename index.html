@@ -12841,7 +12841,10 @@ function cycleSBCell(el, empId, dayIdx, monthKey){
 // ════════════════════════════════════════════════════════════════
 
 function findLastShiftBeforeMonth(emp, targetYr, targetMo){
-  // Search backwards through months to find last D or N shift
+  // Search backwards through months to find last D or N shift.
+  // ALSO counts how many off-days (O) were encountered between that
+  // last D/N and the target month, so caller can flip rotation correctly.
+  // Returns: { shift: 'D'|'N', offsAfter: number } or 'D' (legacy fallback)
   const MONTH_ORDER = [
     '2026_04','2026_03','2026_02','2026_01',
     '2025_12','2025_11','2025_10','2025_09','2025_08'
@@ -12854,34 +12857,46 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
   let scanYr = targetYr, scanMo = targetMo - 1;
   if(scanMo === 0){ scanMo = 12; scanYr--; }
 
+  // Track off-days seen while walking backwards from target month
+  // (i.e. days AFTER the last D/N, chronologically)
+  let offsAfter = 0;
+
   for(let attempt = 0; attempt < 18; attempt++){
     const mk = `${scanYr}_${String(scanMo).padStart(2,'0')}`;
     const daysInScanMo = new Date(scanYr, scanMo, 0).getDate();
+
+    // Helper: scan a month array backwards, counting offs and returning shift
+    const scanArr = (arr) => {
+      for(let d = daysInScanMo - 1; d >= 0; d--){
+        const sh = arr[d];
+        if(sh === 'D' || sh === 'N') return { shift: sh, offsAfter };
+        if(sh === 'O') offsAfter++;
+      }
+      return null;
+    };
 
     // Check Firebase saved first
     if(fbScheds[mk] && fbScheds[mk][emp.id]){
       let arr = fbScheds[mk][emp.id];
       if(arr && !Array.isArray(arr)) arr = Object.values(arr);
-      if(arr) for(let d = daysInScanMo - 1; d >= 0; d--){
-        const sh = arr[d];
-        if(sh === 'D' || sh === 'N') return sh;
+      if(arr){
+        const res = scanArr(arr);
+        if(res) return res;
       }
     }
 
     // Check EXCEL_SCHEDULES
     if(typeof EXCEL_SCHEDULES !== 'undefined' && EXCEL_SCHEDULES[mk] && EXCEL_SCHEDULES[mk][emp.id]){
-      const arr = EXCEL_SCHEDULES[mk][emp.id];
-      for(let d = daysInScanMo - 1; d >= 0; d--){
-        const sh = arr[d];
-        if(sh === 'D' || sh === 'N') return sh;
-      }
+      const res = scanArr(EXCEL_SCHEDULES[mk][emp.id]);
+      if(res) return res;
     }
 
     // Also check emp.ms (March 2026 hardcoded in employee object)
     if(scanYr === 2026 && scanMo === 3 && emp.ms && emp.ms.length){
       for(let d = emp.ms.length - 1; d >= 0; d--){
         const sh = emp.ms[d];
-        if(sh === 'D' || sh === 'N') return sh;
+        if(sh === 'D' || sh === 'N') return { shift: sh, offsAfter };
+        if(sh === 'O') offsAfter++;
       }
     }
 
@@ -12890,7 +12905,7 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
     if(scanMo === 0){ scanMo = 12; scanYr--; }
     if(scanYr < 2025) break;
   }
-  return 'D'; // default fallback
+  return { shift: 'D', offsAfter: 0 }; // default fallback
 }
 
 function autoGenSchedule(monthKey){
@@ -12944,8 +12959,15 @@ function autoGenSchedule(monthKey){
       return;
     }
 
-    // Find last D or N to determine starting shift
-    let curShift = findLastShiftBeforeMonth(emp, yr, mo);
+    // Find last D or N to determine starting shift, AND count off-days
+    // between that shift and the target month — for each off encountered,
+    // the rotation flips (this is what was missing before).
+    const lastInfo = findLastShiftBeforeMonth(emp, yr, mo);
+    let curShift = lastInfo.shift;
+    // Apply pending flips from off-days that occurred after the last D/N
+    for(let i = 0; i < (lastInfo.offsAfter || 0); i++){
+      curShift = (curShift === 'D') ? 'N' : 'D';
+    }
 
     // Generate the month — protect approved leaves
     const schedule = [];
