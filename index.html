@@ -12626,11 +12626,12 @@ const SHIFT_QUICK = ['D','N','O','L','G','C/O','HLF','Ab'];
 function openScheduleBuilder(){
   const now = new Date();
   const nextMonth = new Date(now.getFullYear(), now.getMonth()+1, 1);
-  const defaultKey = nextMonth.toISOString().substring(0,7);
+  // FIX: Use local date parts — toISOString() converts to UTC which shifts months in IST
+  const defaultKey = nextMonth.getFullYear()+'-'+String(nextMonth.getMonth()+1).padStart(2,'0');
   const months = [];
   for(let i=-1; i<=6; i++){
     const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
-    const key = d.toISOString().substring(0,7);
+    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     const label = d.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
     months.push({key, label});
   }
