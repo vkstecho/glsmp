@@ -2375,7 +2375,7 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── MY SHIFT ── -->
 <div class="tab" id="tab-myshift">
-  <div class="page-title">मेरी शिफ्ट</div>
+  <div class="page-title" id="pageTitleMyShift">मेरी शिफ्ट</div>
   <div id="myShiftContent"></div>
 </div>
 
@@ -2392,18 +2392,18 @@ setTimeout(_forceLogin, 10000);
     <button id="printBtn" onclick="printSched()" class="sched-admin-btn">🖨️ प्रिंट</button>
     <button id="excelBtn" onclick="exportSchedExcel()" class="sched-admin-btn" style="border-color:rgba(34,197,94,.5);color:#22c55e;background:rgba(34,197,94,.07)">📊 Excel</button>
     <button id="empUploadBtn" onclick="openExcelUpload()" class="sched-admin-btn blue">📤 Shift Upload</button>
-    <button onclick="openEmpUploadWizard()" class="sched-admin-btn" style="border-color:rgba(34,197,94,.4);color:var(--green);background:rgba(34,197,94,.06)">👤 Emp Upload</button>
+    <button id="empUploadWizardBtn" onclick="openEmpUploadWizard()" class="sched-admin-btn" style="border-color:rgba(34,197,94,.4);color:var(--green);background:rgba(34,197,94,.06)">👤 Emp Upload</button>
     <button id="msToggleBtn" onclick="toggleSelectMode()" class="sched-admin-btn" style="border-color:rgba(167,139,250,.4);color:#a78bfa;background:rgba(167,139,250,.06)">☑️ Multi-Select</button>
-    <button onclick="openEmpReorderPanel()" class="sched-admin-btn" style="border-color:rgba(168,85,247,.4);color:#c084fc;background:rgba(168,85,247,.08)">↕️ क्रम बदलें</button>
+    <button id="empReorderBtn" onclick="openEmpReorderPanel()" class="sched-admin-btn" style="border-color:rgba(168,85,247,.4);color:#c084fc;background:rgba(168,85,247,.08)">↕️ क्रम बदलें</button>
   </div>
   <!-- Custom date range row -->
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-    <button onclick="openCustomRange()" class="act-btn edit" style="flex:1;padding:10px 8px;border-radius:10px;font-size:13px;min-height:40px">🗓️ कस्टम तारीख चुनें</button>
+    <button id="customRangeBtn" onclick="openCustomRange()" class="act-btn edit" style="flex:1;padding:10px 8px;border-radius:10px;font-size:13px;min-height:40px">🗓️ कस्टम तारीख चुनें</button>
     <button id="resetRangeBtn" onclick="resetCustomRange()" style="display:none;padding:10px 12px;border-radius:10px;border:1px solid rgba(244,63,94,.4);background:rgba(244,63,94,.08);color:var(--lv);font-size:13px;cursor:pointer;min-height:40px">✕ Reset</button>
   </div>
   <div class="sched-sticky-hdr" id="schedStickyHdr">
     <div class="chips" id="schedFilter">
-    <div class="chip on" onclick="setSchedSec('ALL',this)">सभी</div>
+    <div class="chip on" onclick="setSchedSec('ALL',this)" data-i18n-all>सभी</div>
     <div class="chip" onclick="setSchedSec('M12',this)">M-1&2</div>
     <div class="chip" onclick="setSchedSec('S12',this)">S-1&2</div>
     <div class="chip" onclick="setSchedSec('SUP',this)">Supervisor</div>
@@ -2486,13 +2486,13 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── LEAVE ── -->
 <div class="tab" id="tab-leave">
-  <div class="page-title">अवकाश (Leaves)</div>
+  <div class="page-title" id="pageTitleLeaves">अवकाश (Leaves)</div>
   <div class="action-row-compact">
     <button class="action-primary" onclick="openLeaveForm()">+ नया अवकाश आवेदन</button>
     <button class="action-secondary red" onclick="openResignationForm()">📝 Resignation</button>
   </div>
   <div class="chips" id="leaveFilter">
-    <div class="chip on" onclick="setLF('all',this)">सभी</div>
+    <div class="chip on" onclick="setLF('all',this)" data-i18n-all>सभी</div>
     <div class="chip" onclick="setLF('pending',this)">⏳ प्रतीक्षा में</div>
     <div class="chip" onclick="setLF('approved',this)">✅ मंजूर</div>
     <div class="chip" onclick="setLF('rejected',this)">❌ अस्वीकार</div>
@@ -2503,14 +2503,14 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── REPORTS ── -->
 <div class="tab" id="tab-reports">
-  <div class="page-title">रिपोर्ट</div>
+  <div class="page-title" id="pageTitleReports">रिपोर्ट</div>
   <div class="page-sub">NCR, अनुपस्थिति, चेतावनी, प्रशंसा, Imp Info &nbsp;·&nbsp; <span id="reportTotalBadge" style="color:#f87171;font-weight:800"></span></div>
   <div class="action-row-compact">
     <button class="action-primary" onclick="openReportForm()">+ नई रिपोर्ट दर्ज करें</button>
     <button id="impInfoBtn" class="action-secondary blue" style="display:none" onclick="openImpInfoForm()">📢 Imp. Info</button>
   </div>
   <div class="chips" id="reportFilter">
-    <div class="chip on" onclick="setRF('all',this)">सभी</div>
+    <div class="chip on" onclick="setRF('all',this)" data-i18n-all>सभी</div>
     <div class="chip" onclick="setRF('ncr',this)">⚠️ NCR</div>
     <div class="chip" onclick="setRF('absent',this)">📵 अनुपस्थित</div>
     <div class="chip" onclick="setRF('warning',this)">⚡ चेतावनी</div>
@@ -2523,7 +2523,7 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── PENDING (ADMIN) ── -->
 <div class="tab" id="tab-pending">
-  <div class="page-title">अनुमोदन पेंडिंग</div>
+  <div class="page-title" id="pageTitlePending">अनुमोदन पेंडिंग</div>
   <button id="smsSettingsBtn" onclick="openSmsSettings()" style="display:none;width:100%;padding:14px;border-radius:12px;border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.08);color:var(--green);font-family:'Noto Sans Devanagari',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">
     ⚙️ SMS Notification Settings
   </button>
@@ -2541,14 +2541,14 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── TEAM ── -->
 <div class="tab" id="tab-team">
-  <div class="page-title">टीम</div>
+  <div class="page-title" id="pageTitleTeam">टीम</div>
   <div id="teamAddBtn"></div>
   <div class="search-box">
     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/></svg>
     <input type="text" placeholder="नाम या कोड से खोजें..." oninput="renderTeam(this.value)">
   </div>
   <div class="chips" id="teamFilter">
-    <div class="chip on" onclick="setTeamSec('ALL',this)">सभी</div>
+    <div class="chip on" onclick="setTeamSec('ALL',this)" data-i18n-all>सभी</div>
     <div class="chip" onclick="setTeamSec('M1',this)">M-1</div>
     <div class="chip" onclick="setTeamSec('M2',this)">M-2</div>
     <div class="chip" onclick="setTeamSec('S1',this)">Slitter-1</div>
@@ -2622,7 +2622,7 @@ setTimeout(_forceLogin, 10000);
 
 <!-- ── INSTRUCTIONS ── -->
 <div class="tab" id="tab-instructions">
-  <div class="page-title">महत्वपूर्ण निर्देश</div>
+  <div class="page-title" id="pageTitleInstructions">महत्वपूर्ण निर्देश</div>
   <div class="page-sub">मेटलाइज़र विभाग</div>
   <div id="instEditBtn"></div>
   <div id="instructionsContent"></div>
@@ -2658,7 +2658,7 @@ setTimeout(_forceLogin, 10000);
 
   <!-- Filter chips -->
   <div class="chips" id="todoFilter">
-    <div class="chip on"  onclick="setTodoFilter('all',this)">सभी</div>
+    <div class="chip on"  onclick="setTodoFilter('all',this)" data-i18n-all>सभी</div>
     <div class="chip" onclick="setTodoFilter('pending',this)">⏳ बाकी</div>
     <div class="chip" onclick="setTodoFilter('done',this)">✅ पूरा</div>
     <div class="chip" onclick="setTodoFilter('high',this)">🔴 Urgent</div>
@@ -4224,31 +4224,32 @@ function toggleLang(){
 }
 
 function applyLang(){
+  const isEn = _lang === 'en';
   // Toggle button label
   const btn = document.getElementById('langToggleBtn');
-  if(btn) btn.textContent = _lang === 'hi' ? 'EN' : 'हि';
+  if(btn) btn.textContent = isEn ? 'हि' : 'EN';
 
   // Header brand
   const brand = document.querySelector('.hdr-brand');
-  if(brand) brand.innerHTML = _lang==='en'
+  if(brand) brand.innerHTML = isEn
     ? '<span>M·P</span> Metalliser'
     : '<span>M·P</span> मेटलाइज़र';
 
   // Sync row
   const syncLbl = document.getElementById('syncLabel');
-  if(syncLbl) syncLbl.textContent = _lang==='en'
+  if(syncLbl) syncLbl.textContent = isEn
     ? '🔄 Live Sync · Last Update:'
     : '🔄 लाइव सिंक · अंतिम अपडेट:';
 
   // Section status heading
   const secTitle = document.getElementById('homeSectionTitle');
-  if(secTitle) secTitle.textContent = _lang==='en'
+  if(secTitle) secTitle.textContent = isEn
     ? "Today's Status — Section Wise"
     : 'आज की स्थिति — सेक्शन वार';
 
   // Learn bar
   const learnTitle = document.getElementById('learnBarTitle');
-  if(learnTitle) learnTitle.textContent = _lang==='en' ? 'Learn & Grow' : 'सीखें & Grow करें';
+  if(learnTitle) learnTitle.textContent = isEn ? 'Learn & Grow' : 'सीखें & Grow करें';
 
   // Home stat labels
   const statMap = {
@@ -4258,20 +4259,117 @@ function applyLang(){
   };
   Object.entries(statMap).forEach(([id,txt])=>{
     const el = document.getElementById(id);
-    if(el) el.textContent = _lang==='en' ? txt.en : txt.hi;
+    if(el) el.textContent = isEn ? txt.en : txt.hi;
   });
 
-  // Section filter "सभी" button
-  const secBtns = document.querySelectorAll('.sec-filter-btn, [onclick*="filterSec"]');
-  secBtns.forEach(b=>{
-    const val = b.dataset.sec || b.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
-    if(val === 'ALL') b.textContent = _lang==='en' ? 'All' : 'सभी';
+  // ── Page titles ──
+  const pageTitleMap = {
+    'pageTitleMyShift':       {hi:'मेरी शिफ्ट',          en:'My Shift'},
+    'pageTitleLeaves':        {hi:'अवकाश (Leaves)',     en:'Leaves'},
+    'pageTitleReports':       {hi:'रिपोर्ट',             en:'Reports'},
+    'pageTitlePending':       {hi:'अनुमोदन पेंडिंग',    en:'Approval Pending'},
+    'pageTitleTeam':          {hi:'टीम',                  en:'Team'},
+    'pageTitleInstructions':  {hi:'महत्वपूर्ण निर्देश',  en:'Important Instructions'}
+  };
+  Object.entries(pageTitleMap).forEach(([id,txt])=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = isEn ? txt.en : txt.hi;
   });
+
+  // ── Schedule admin buttons ──
+  const schedBtnMap = {
+    'schedBuildBtn':       {hi:'📋 Schedule बनाएं',      en:'📋 Create Schedule'},
+    'printBtn':            {hi:'🖨️ प्रिंट',              en:'🖨️ Print'},
+    'excelBtn':            {hi:'📊 Excel',                en:'📊 Excel'},
+    'empUploadBtn':        {hi:'📤 Shift Upload',         en:'📤 Shift Upload'},
+    'empUploadWizardBtn':  {hi:'👤 Emp Upload',           en:'👤 Emp Upload'},
+    'empReorderBtn':       {hi:'↕️ क्रम बदलें',         en:'↕️ Reorder'},
+    'customRangeBtn':      {hi:'🗓️ कस्टम तारीख चुनें', en:'🗓️ Pick Custom Date'},
+  };
+  Object.entries(schedBtnMap).forEach(([id,txt])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    // Don't override Multi-Select if it's currently in active "Saaf" mode
+    el.textContent = isEn ? txt.en : txt.hi;
+  });
+
+  // Multi-Select button (special — has dynamic states)
+  const msBtn = document.getElementById('msToggleBtn');
+  if(msBtn && !(typeof _msActive !== 'undefined' && _msActive)){
+    msBtn.textContent = isEn ? '☑️ Multi-Select' : '☑️ Multi-Select';
+  }
+
+  // ── All "सभी" / "All" filter chips ──
+  document.querySelectorAll('[data-i18n-all]').forEach(el => {
+    el.textContent = isEn ? 'All' : 'सभी';
+  });
+
+  // ── Cell tap legend in Schedule Builder if open ──
+  const sbLegend = document.getElementById('sbCellLegend');
+  if(sbLegend) sbLegend.textContent = isEn
+    ? 'Cell tap: D → N → O → L → G → CO → ½ → Ab → clear'
+    : 'Cell tap करें: D → N → O → L → G → CO → ½ → Ab → साफ';
 
   // Re-render home if on home tab
   if(typeof _currentTab !== 'undefined' && _currentTab === 'home'){
     try{ renderHome(); }catch(e){}
   }
+
+  // ── PHASE 3: DOM walker — translate ALL text nodes & placeholders ──
+  // Only runs when a translation function exists
+  if(typeof _translateDOM === 'function'){
+    try{ _translateDOM(); }catch(e){ console.warn('[i18n] DOM walk failed:', e); }
+  }
+}
+
+/**
+ * _translateDOM() — walks the DOM and translates:
+ *   - Text nodes (only when their full trimmed text matches a dictionary key)
+ *   - Input/textarea placeholders
+ *   - Button title attributes
+ * Idempotent and safe: stores original text in data attribute for reverse-translation.
+ */
+function _translateDOM(){
+  if(typeof _i18n_HI_EN !== 'object') return;
+  const isEn = _lang === 'en';
+
+  // Walk all elements that may contain visible text
+  const SELECTOR = 'button, .chip, .nb, .submit-btn, .act-btn, .sched-admin-btn, .big-btn, .back-btn, label, h1, h2, h3, h4, .modal-title, .page-title, .empty-text, .stat-lbl, .sec-name, .lc-title, .lc-sub, .pc-nav-lbl, span, div, p, td, th, option';
+  const nodes = document.querySelectorAll(SELECTOR);
+  nodes.forEach(el => {
+    // Skip elements with children other than pure text (avoid corrupting markup)
+    if(el.children.length > 0) return;
+    const orig = (el.dataset.i18nOrig || el.textContent || '').trim();
+    if(!orig) return;
+    // Cache original on first encounter
+    if(!el.dataset.i18nOrig) el.dataset.i18nOrig = orig;
+
+    if(isEn){
+      const translated = _i18n_HI_EN[orig];
+      if(translated && el.textContent.trim() !== translated){
+        // Preserve any leading/trailing whitespace
+        el.textContent = el.textContent.replace(orig, translated);
+      }
+    } else {
+      // Restore original Hindi
+      if(el.textContent.trim() !== el.dataset.i18nOrig){
+        el.textContent = el.dataset.i18nOrig;
+      }
+    }
+  });
+
+  // Translate placeholder attributes
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    const orig = el.dataset.i18nPh || el.getAttribute('placeholder') || '';
+    if(!orig) return;
+    if(!el.dataset.i18nPh) el.dataset.i18nPh = orig;
+    if(isEn){
+      const translated = _i18n_HI_EN[orig];
+      if(translated) el.setAttribute('placeholder', translated);
+    } else {
+      el.setAttribute('placeholder', el.dataset.i18nPh);
+    }
+  });
 }
 setTimeout(applyLang, 200);
 function isAdmin(){ return SESSION.role==='admin'; }
@@ -6253,6 +6351,8 @@ function _goTabDirect(t){
   if(t==='pending')      renderPending();
   if(t==='team')         renderTeam();
   if(t==='instructions') renderInstructions();
+  // Re-apply language so any newly-rendered elements get translated
+  try{ if(typeof applyLang === 'function') applyLang(); }catch(e){}
 }
 
 function goTab(t){
@@ -6300,16 +6400,23 @@ function renderAll(){
 // ── Reusable confirm modal (replaces native confirm() dialogs) ──
 // Usage: confirmModal('Title', 'Message', 'Yes btn label', 'No btn label') → Promise<boolean>
 function confirmModal(title, message, yesLabel='✅ हाँ', noLabel='रद्द करें', yesClass='submit-btn'){
+  // Auto-translate all visible text via t() helper
+  const _t = (typeof t === 'function') ? t : (s=>s);
+  // Default labels also need translation
+  const _yesLabel = (yesLabel === '✅ हाँ' && typeof _lang !== 'undefined' && _lang === 'en') ? '✅ Yes' : _t(yesLabel);
+  const _noLabel  = (noLabel  === 'रद्द करें' && typeof _lang !== 'undefined' && _lang === 'en') ? 'Cancel' : _t(noLabel);
+  const _title    = _t(title);
+  const _message  = _t(message);
   return new Promise(resolve=>{
     const overlay = document.createElement('div');
     overlay.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
     overlay.innerHTML=`
       <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;border-top:1px solid var(--border2);animation:slideUp .25s cubic-bezier(.32,0,.15,1)">
         <div style="width:32px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px"></div>
-        <div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:10px;text-align:center">${title}</div>
-        <div style="font-size:14px;color:var(--muted2);line-height:1.7;text-align:center;margin-bottom:22px">${message}</div>
-        <button id="_cmYes" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--m1),#c2410c);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;box-shadow:0 4px 20px rgba(249,115,22,.3)">${yesLabel}</button>
-        <button id="_cmNo"  style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--border2);background:var(--card);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">${noLabel}</button>
+        <div style="font-size:18px;font-weight:900;color:var(--text);margin-bottom:10px;text-align:center">${_title}</div>
+        <div style="font-size:14px;color:var(--muted2);line-height:1.7;text-align:center;margin-bottom:22px">${_message}</div>
+        <button id="_cmYes" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--m1),#c2410c);color:#fff;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;box-shadow:0 4px 20px rgba(249,115,22,.3)">${_yesLabel}</button>
+        <button id="_cmNo"  style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--border2);background:var(--card);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">${_noLabel}</button>
       </div>`;
     document.body.appendChild(overlay);
     const cleanup = val=>{ document.body.removeChild(overlay); resolve(val); };
@@ -11771,16 +11878,501 @@ async function viewSecurityLog(){
 function openModal(html){
   document.getElementById('modalBody').innerHTML=`<div class="modal">${html}</div>`;
   document.getElementById('overlay').classList.add('open');
+  // Auto-translate modal-title elements when in English mode
+  if(typeof _lang !== 'undefined' && _lang === 'en' && typeof t === 'function'){
+    setTimeout(()=>{
+      try{
+        document.querySelectorAll('#modalBody .modal-title').forEach(el => {
+          const orig = el.textContent.trim();
+          const translated = t(orig);
+          if(translated !== orig) el.textContent = translated;
+        });
+      }catch(e){}
+    }, 30);
+  }
 }
 function closeModal(){ document.getElementById('overlay').classList.remove('open'); }
 
 // ════════════════════════════════════════
 // TOAST
 // ════════════════════════════════════════
+
+// ── i18n TRANSLATION DICTIONARY (Hindi → English) ──
+// Used by toast(), confirmModal(), and other dynamic UI text
+// Key = original Hindi string, Value = English translation
+// Strings with ${...} placeholders use the same placeholders
+const _i18n_HI_EN = {
+  // ── Validation / Required field errors ──
+  'Content नहीं मिला':                       'Content not found',
+  'Plan चुनें':                              'Select Plan',
+  'Title भरें':                              'Enter Title',
+  'URL खाली है':                             'URL is empty',
+  'अंतिम दिन चुनें':                         'Select end date',
+  'इस कर्मचारी का कोई NCR नहीं है':         'No NCR for this employee',
+  'कर्मचारी चुनें':                          'Select Employee',
+  'कर्मचारी नहीं मिला':                     'Employee not found',
+  'कारण चुनें':                              'Select Reason',
+  'कोई बदलाव नहीं है':                       'No changes to save',
+  'जल्द आ रहा है! ⏳':                       'Coming soon! ⏳',
+  'नाम और link दोनों जरूरी हैं':            'Both name and link are required',
+  'नाम और कोड जरूरी है':                    'Name and code required',
+  'नाम भरें':                                'Enter Name',
+  'पहले plan चुनें':                         'Select a plan first',
+  'सभी जानकारी भरें':                       'Fill all details',
+  'सही price डालें':                         'Enter valid price',
+  'सही मोबाइल नंबर डालें':                  'Enter valid mobile number',
+
+  // ── Warnings (⚠️) ──
+  '⏳ ${secs} सेकंड बाद भेजें':              '⏳ Send after ${secs} seconds',
+  '☑️ Select Mode ON — cells tap करें, फिर shift चुनें': '☑️ Select Mode ON — tap cells, then choose shift',
+  '⚠️ 10MB से छोटी फोटो चुनें':              '⚠️ Pick photo smaller than 10MB',
+  '⚠️ API Key खाली है':                      '⚠️ API Key is empty',
+  '⚠️ App Validity: सिर्फ ${daysLeft} दिन बाकी! Profile tap करें।': '⚠️ App Validity: Only ${daysLeft} days left! Tap Profile.',
+  '⚠️ C-Off के लिए Shift Date जरूरी है':     '⚠️ Shift Date required for C-Off',
+  '⚠️ Display error — कृपया page refresh करें': '⚠️ Display error — please refresh the page',
+  '⚠️ Duplicate Leave! इन dates पर पहले से application है: ': '⚠️ Duplicate Leave! Application already exists for these dates: ',
+  '⚠️ EL Limit पार! Available: ':           '⚠️ EL Limit exceeded! Available: ',
+  '⚠️ Leave override — D shift set। Save करने पर लागू होगा।': '⚠️ Leave override — D shift set. Will apply on Save.',
+  '⚠️ Schedule Builder open नहीं है':       '⚠️ Schedule Builder not open',
+  '⚠️ Title जरूरी है':                       '⚠️ Title required',
+  '⚠️ अधिकतम 1 साल (366 दिन) का range चुनें': '⚠️ Maximum range is 1 year (366 days)',
+  '⚠️ अधिकतम 5 photos':                     '⚠️ Maximum 5 photos',
+  '⚠️ आज ${remaining} OTP और भेज सकते हैं':  '⚠️ ${remaining} OTPs left for today',
+  '⚠️ आपकी App access ':                     '⚠️ Your App access ',
+  '⚠️ कारण लिखना अनिवार्य है':              '⚠️ Reason is required',
+  '⚠️ कृपया दोनों तारीखें चुनें':            '⚠️ Please pick both dates',
+  '⚠️ कोई data नहीं':                        '⚠️ No data',
+  '⚠️ जानकारी (Details) लिखें':              '⚠️ Enter details',
+  '⚠️ पहले API Key डालें':                  '⚠️ Enter API Key first',
+  '⚠️ पहले Schedule खोलें':                 '⚠️ Open Schedule first',
+  '⚠️ पहले month select करें':               '⚠️ Select month first',
+  '⚠️ फोटो 10MB से छोटी होनी चाहिए':         '⚠️ Photo must be smaller than 10MB',
+  '⚠️ फोटो बहुत बड़ी है':                    '⚠️ Photo too large',
+  '⚠️ फोटो बहुत बड़ी है — कृपया छोटी फोटो लें': '⚠️ Photo too large — please take smaller photo',
+  '⚠️ महीना चुनें':                          '⚠️ Select month',
+  '⚠️ विषय (Title) लिखें':                   '⚠️ Enter Title',
+  '⚠️ शुरू की तारीख अंत से पहले होनी चाहिए': '⚠️ Start date must be before end date',
+  '⚠️ सही 10 अंक का नंबर डालें':            '⚠️ Enter valid 10-digit number',
+
+  // ── Success (✅) ──
+  '✅ ${cells.length} cells में ${shiftVal} लगाया': '✅ ${shiftVal} applied to ${cells.length} cells',
+  '✅ ${name} जोड़ा गया':                    '✅ ${name} added',
+  '✅ ${savedEntries.length} बदलाव save हुए': '✅ ${savedEntries.length} changes saved',
+  '✅ App install हो रही है...':             '✅ App installing...',
+  '✅ App पहले से installed है! Home screen पर देखें।': '✅ App already installed! Check your Home screen.',
+  '✅ Button जोड़ दिया गया!':                '✅ Button added!',
+  '✅ Content add हो गया!':                  '✅ Content added!',
+  '✅ Dedication save हो गई!':              '✅ Dedication saved!',
+  '✅ Excel (CSV) file download हो गई!':     '✅ Excel (CSV) file downloaded!',
+  '✅ Fingerprint login set up हो गया!':     '✅ Fingerprint login set up!',
+  '✅ Login हो गया! Welcome ':               '✅ Logged in! Welcome ',
+  '✅ Password set हो गया! अगली बार सीधे login करें': '✅ Password set! Next time login directly',
+  '✅ Price update हो गई!':                  '✅ Price updated!',
+  '✅ Request भेज दी! VIVEK approve करेंगे।': '✅ Request sent! VIVEK will approve.',
+  '✅ Request भेज दी! VIVEK verify करेंगे।': '✅ Request sent! VIVEK will verify.',
+  '✅ Request भेजी! WhatsApp से Admin को notification जाएगी।': '✅ Request sent! Admin will get a WhatsApp notification.',
+  '✅ SMS Settings save हो गई':              '✅ SMS Settings saved',
+  '✅ Schedule image download हो गई!':       '✅ Schedule image downloaded!',
+  '✅ Schedule save हो गई!':                 '✅ Schedule saved!',
+  '✅ Shift schedule upload हो गया!':        '✅ Shift schedule uploaded!',
+  '✅ UPI ID Copy हो गई!':                   '✅ UPI ID copied!',
+  '✅ अनलॉक हो गया':                         '✅ Unlocked',
+  '✅ काम जोड़ा गया!':                       '✅ Task added!',
+  '✅ क्रम & Group save हो गया! Schedule update हो रही है...': '✅ Order & Group saved! Updating schedule...',
+  '✅ छुट्टी आवेदन भेज दिया गया!':            '✅ Leave application sent!',
+  '✅ छुट्टी मंजूर! शेड्यूल अपडेट हो गया':   '✅ Leave approved! Schedule updated',
+  '✅ जानकारी अपडेट हो गई':                  '✅ Information updated',
+  '✅ डेटा initialize हो गया':               '✅ Data initialized',
+  '✅ निर्देश सहेज लिए गए!':                 '✅ Instructions saved!',
+  '✅ रिपोर्ट भेज दी गई!':                   '✅ Report sent!',
+
+  // ── Errors (❌) ──
+  '❌ 6-digit OTP डालें':                    '❌ Enter 6-digit OTP',
+  '❌ Data नहीं मिला':                       '❌ Data not found',
+  '❌ Data नहीं मिला — page refresh करें':   '❌ Data not found — please refresh',
+  '❌ Department / Machine चुनें':           '❌ Select Department / Machine',
+  '❌ Employee add नहीं हुआ: ':              '❌ Employee not added: ',
+  '❌ Manager section की editing सिर्फ Admin कर सकता है': '❌ Only Admin can edit Manager section',
+  '❌ Manager section में सिर्फ Admin जोड़ सकते हैं':     '❌ Only Admin can add to Manager section',
+  '❌ Password कम से कम 5 characters होना चाहिए':         '❌ Password must be at least 5 characters',
+  '❌ Permission नहीं है':                   '❌ No permission',
+  '❌ Record नहीं मिला':                     '❌ Record not found',
+  '❌ आज की OTP limit पूरी हो गई। कल try करें।': '❌ Today\'s OTP limit reached. Try tomorrow.',
+  '❌ कम से कम एक section चुनें':           '❌ Select at least one section',
+  '❌ काम का नाम डालें':                     '❌ Enter task name',
+  '❌ कोई data नहीं है':                     '❌ No data available',
+  '❌ कोई match नहीं':                       '❌ No match',
+  '❌ गलत Key':                              '❌ Wrong Key',
+  '❌ छुट्टी अस्वीकार की गई':                '❌ Leave rejected',
+  '❌ रजिस्ट्रेशन अस्वीकार किया':            '❌ Registration rejected',
+  '❌ सिर्फ Admin/Manager export कर सकते हैं': '❌ Only Admin/Manager can export',
+  '❌ सिर्फ Admin/Manager कर सकते हैं':       '❌ Only Admin/Manager can do this',
+
+  // ── Misc emojis ──
+  '🎉 App install हो गई! Home screen पर देखें': '🎉 App installed! Check Home screen',
+  '👆 Fingerprint से login हो गया!':         '👆 Logged in via Fingerprint!',
+  '📝 Resignation request भेज दी गई!':       '📝 Resignation request sent!',
+  '📢 Information पोस्ट हो गई!':            '📢 Information posted!',
+  '📤 CSV export हो गई!':                    '📤 CSV exported!',
+  '📲 ${waQueue.length} कर्मचारियों को WhatsApp भेजना है': '📲 WhatsApp to be sent to ${waQueue.length} employees',
+  '📲 ${waQueue[0].emp.name} को WhatsApp भेजा': '📲 WhatsApp sent to ${waQueue[0].emp.name}',
+  '📸 Image बन रही है... रुकिए':            '📸 Generating image... please wait',
+  '🔄 Default order restore हो गया':         '🔄 Default order restored',
+  '🔄 Original shift restore हो गई':         '🔄 Original shift restored',
+  '🔄 Practice reset — फिर से शुरू करें!':  '🔄 Practice reset — start again!',
+  '🔄 दोबारा Login करें':                    '🔄 Please login again',
+  '🔄 नया version मिला — refresh हो रहा है...': '🔄 New version available — refreshing...',
+  '🔑 Password हटाया गया — Employee Code से दोबारा verify करें': '🔑 Password removed — verify again with Employee Code',
+  '🗑️ Button हटा दिया':                      '🗑️ Button removed',
+  '🗑️ Content हटा दिया':                     '🗑️ Content removed',
+  '🗑️ Delete हो गया':                        '🗑️ Deleted',
+  '🗑️ Report delete हो गई':                  '🗑️ Report deleted',
+  '🗑️ सभी बदलाव रद्द किए गए':                '🗑️ All changes cancelled',
+  '🚪 Logout हो रहा है...':                  '🚪 Logging out...',
+
+  // ── confirmModal titles ──
+  '${n} बदलाव Unsaved हैं!':                 '${n} Unsaved changes!',
+  '${uncheckedItems.length} Items Incomplete हैं': '${uncheckedItems.length} Items Incomplete',
+  'Access Revoke करें?':                     'Revoke Access?',
+  'Default पर वापस जाएं?':                   'Reset to Default?',
+  'Device हटाएं?':                           'Remove Device?',
+  'Report Delete करें?':                     'Delete Report?',
+  'Resignation Reject करें?':                'Reject Resignation?',
+  'काम Delete करें?':                        'Delete Task?',
+
+  // ── Modal titles ──
+  '${editId?\'✏️ काम Edit करें\':\'➕ नया काम जोड़ें\'}': '${editId?\'✏️ Edit Task\':\'➕ Add New Task\'}',
+  '${name} का डेटा हमेशा के लिए हटाएं?':     'Delete ${name}\'s data permanently?',
+  '${name} को टीम से हटाएं?':                'Remove ${name} from team?',
+  '⏳ Access Extend करें':                   '⏳ Extend Access',
+  '✏️ ${e.name} संपादित करें':               '✏️ Edit ${e.name}',
+  '✏️ Shift चुनें':                          '✏️ Select Shift',
+  '✏️ निर्देश संपादित करें':                  '✏️ Edit Instructions',
+  '➕ Content Add करें':                      '➕ Add Content',
+  '🌴 Leave का कारण':                        '🌴 Leave Reason',
+  '🌴 छुट्टी आवेदन':                         '🌴 Leave Application',
+  '👁️ Preview — Save करने से पहले देखें':    '👁️ Preview — Review before saving',
+  '👤 नया कर्मचारी':                         '👤 New Employee',
+  '📋 रिपोर्ट दर्ज करें':                    '📋 File Report',
+  '📤 Excel से Shift Schedule अपलोड करें':   '📤 Upload Shift Schedule from Excel',
+  '📤 Excel से Team Data Update करें':       '📤 Update Team Data from Excel',
+  '📤 कर्मचारी List Upload करें':            '📤 Upload Employee List',
+  '📲 App Install करें':                     '📲 Install App',
+  '📲 iPhone पर Install करें':               '📲 Install on iPhone',
+  '🔗 Quick Links Manage करें':              '🔗 Manage Quick Links',
+  '🗓️ कस्टम तारीख सीमा':                     '🗓️ Custom Date Range',
+
+  // ── PHASE 3: Buttons (action labels) ──
+  '&larr; वापस जाएं':                        '&larr; Back',
+  '+ नई रिपोर्ट दर्ज करें':                  '+ File New Report',
+  '+ नया अवकाश आवेदन':                       '+ New Leave Application',
+  '+ नया कर्मचारी जोड़ें':                   '+ Add New Employee',
+  '+ नियम जोड़ें':                           '+ Add Rule',
+  'अभी नहीं → सीधे Login करें':             'Not now → Login directly',
+  'आगे बढ़ें →':                             'Continue →',
+  'ठीक है':                                  'OK',
+  'बंद करें':                                'Close',
+  'बाद में':                                 'Later',
+  'रद्द':                                    'Cancel',
+  'रद्द करें':                               'Cancel',
+  'रहने दो — Leave रखो':                    'Keep — leave as is',
+  'हाँ, हमेशा के लिए हटाएं':                'Yes, delete permanently',
+  '← बदलें':                                 '← Change',
+  '← वापस':                                  '← Back',
+  '← वापस जाएं':                             '← Back',
+  '↕️ क्रम बदलें':                          '↕️ Reorder',
+  '↩️ वापस':                                 '↩️ Back',
+  '⏳ Pending Approvals देखें':               '⏳ View Pending Approvals',
+  '⚠️ फिर भी बदलें (Leave हटेगी)':           '⚠️ Change anyway (Leave will be removed)',
+  '✅ Accept करें':                          '✅ Accept',
+  '✅ Add करें':                              '✅ Add',
+  '✅ Button जोड़ें':                         '✅ Add Button',
+  '✅ C-Off Mark करें':                       '✅ Mark C-Off',
+  '✅ Confirm करें — Firebase में Save':      '✅ Confirm — Save to Firebase',
+  '✅ Extend करें':                           '✅ Extend',
+  '✅ Leave Mark करें':                       '✅ Mark Leave',
+  '✅ OD Mark करें':                          '✅ Mark OD',
+  '✅ Password Save करें':                   '✅ Save Password',
+  '✅ Verify करके Login Request भेजें':      '✅ Verify & Send Login Request',
+  '✅ Verify करें':                          '✅ Verify',
+  '✅ जोड़ें':                                '✅ Add',
+  '✅ मंजूर':                                '✅ Approved',
+  '✅ मंजूर करें':                           '✅ Approve',
+  '✅ मैंने Pay कर दिया':                    '✅ I have paid',
+  '✅ लागू करें':                             '✅ Apply',
+  '✅ हाँ, हटाएं':                            '✅ Yes, Delete',
+  '✏️ निर्देश संपादित करें':                  '✏️ Edit Instructions',
+  '✓ सब पढ़ा':                              '✓ Mark All Read',
+  '✕ रद्द करें':                             '✕ Cancel',
+  '✕ रद्द करें · Cancel':                    '✕ Cancel',
+  '❌ Reject करें':                          '❌ Reject',
+  '❌ अस्वीकार':                              '❌ Reject',
+  '➕ इस Module में Content Add करें':       '➕ Add Content to this Module',
+  '➕ नया Content Add करें':                 '➕ Add New Content',
+  '➕ नया Section जोड़ें':                   '➕ Add New Section',
+  '🎉 Holiday काम किया':                     '🎉 Worked on Holiday',
+  '👁 दिखाएं':                                '👁 Show',
+  '👆 हाँ, Setup करें':                       '👆 Yes, Set up',
+  '👍 बंद करें':                              '👍 Close',
+  '💳 अभी Pay करें':                          '💳 Pay Now',
+  '💾 Save करें':                             '💾 Save',
+  '💾 Settings Save करें':                    '💾 Save Settings',
+  '💾 सहेजें (Save)':                         '💾 Save',
+  '💾 सेव करें':                              '💾 Save',
+  '📋 Schedule खोलें':                       '📋 Open Schedule',
+  '📋 Schedule बनाएं':                       '📋 Create Schedule',
+  '📞 VIVEK को Call करें':                   '📞 Call VIVEK',
+  '📢 पोस्ट करें':                           '📢 Post',
+  '📤 Approval Request भेजें':                '📤 Send Approval Request',
+  '📤 OTP भेजें':                            '📤 Send OTP',
+  '📤 Resignation भेजें':                    '📤 Send Resignation',
+  '📤 आवेदन भेजें':                          '📤 Send Application',
+  '📤 रिपोर्ट भेजें':                        '📤 Send Report',
+  '📲 Submit &rarr; WhatsApp से Admin को जाएगी': '📲 Submit &rarr; Will go to Admin via WhatsApp',
+  '📷 Selfie लें / बदलें':                  '📷 Take / Change Selfie',
+  '📸 Camera से खींचें':                     '📸 Take with Camera',
+  '📸 Camera से लें':                         '📸 Take with Camera',
+  '🔄 OTP दोबारा भेजें':                    '🔄 Resend OTP',
+  '🔄 Original पर Reset करें':                '🔄 Reset to Original',
+  '🔄 दूसरे Account से Login करें':          '🔄 Login with Different Account',
+  '🔄 दोबारा Practice करें':                 '🔄 Practice Again',
+  '🔍 Tampering Log देखें':                  '🔍 View Tampering Log',
+  '🔐 Login करें':                            '🔐 Login',
+  '🔑 Password भूल गए? Employee Code से दोबारा verify करें': '🔑 Forgot Password? Verify again with Employee Code',
+  '🔓 Login करें':                            '🔓 Login',
+  '🔓 अनलॉक करें':                            '🔓 Unlock',
+  '🔔 W-Off पर बुलाया':                      '🔔 Called on W-Off',
+  '🖨️ Print करें':                           '🖨️ Print',
+  '🖨️ प्रिंट':                                '🖨️ Print',
+  '🖼️ Gallery से चुनें':                     '🖼️ Pick from Gallery',
+  '🗓️ कस्टम तारीख चुनें':                    '🗓️ Pick Custom Date',
+  '🤖 Auto बनाएं':                            '🤖 Auto Generate',
+  '🧪 Test SMS भेजें':                        '🧪 Send Test SMS',
+
+  // ── PHASE 3: Static labels (≤30 chars) ──
+  '(31 दिन की सीमा)':                        '(31 day limit)',
+  '(आप)':                                    '(You)',
+  '45 दिन पूरे हो गए':                       '45 days completed',
+  '6-digit OTP डालें *':                     'Enter 6-digit OTP *',
+  'Admin contact करें':                      'Contact Admin',
+  'Admin जल्द add करेंगे':                  'Admin will add soon',
+  'Admin हैं?':                               'Are you Admin?',
+  'App Install करें':                         'Install App',
+  'Approval का इंतजार है':                  'Waiting for Approval',
+  'Approved Leave है!':                       'Approved Leave exists!',
+  'Department / Machine का नाम':              'Department / Machine name',
+  'Duration (जैसे: 12 min)':                  'Duration (e.g. 12 min)',
+  'Employee Code डालें':                     'Enter Employee Code',
+  'Excel Expert लोड हो रहा है...':           'Loading Excel Expert...',
+  'File चुनें या यहाँ Drop करें':            'Pick File or Drop here',
+  'Fingerprint Login Setup करें?':            'Set up Fingerprint Login?',
+  'MetCost Pro लोड हो रहा है...':            'Loading MetCost Pro...',
+  'Month चुनें':                             'Select Month',
+  'Monthly Salary देख सकें':                 'Can view Monthly Salary',
+  'PASSWORD डालें *':                        'Enter PASSWORD *',
+  'PASSWORD दोबारा डालें *':                 'Re-enter PASSWORD *',
+  'Password बनाएं':                          'Create Password',
+  'Password से login करें →':                'Login with Password →',
+  'Price Edit करें':                          'Edit Price',
+  'Print — Section चुनें':                  'Print — Select Section',
+  'Resignation / त्यागपत्र':                 'Resignation',
+  'Resignation का कारण':                     'Reason for Resignation',
+  'SMS Notifications चालू रखें':            'Keep SMS Notifications on',
+  'Seniors (एक लाइन में एक नाम)':           'Seniors (one name per line)',
+  'SupSkill लोड हो रहा है...':               'Loading SupSkill...',
+  'Test के लिए मोबाइल नंबर':                 'Mobile number for Test',
+  'Time Study लोड हो रहा है...':             'Loading Time Study...',
+  'Title (नाम)':                              'Title (Name)',
+  'Update होंगे':                             'Will be updated',
+  'Validity बढ़ाएं':                         'Extend Validity',
+  'Verify करें':                              'Verify',
+  'Video जल्द upload होगा':                  'Video will be uploaded soon',
+  'अंत की तारीख (Date B)':                  'End Date (Date B)',
+  'अगले 15 दिन':                             'Next 15 days',
+  'अनुमोदन पेंडिंग':                         'Approval Pending',
+  'अपना fingerprint लगाएं':                  'Place your fingerprint',
+  'अपना कर्मचारी कोड type करें':            'Type your employee code',
+  'अभी कोई button नहीं है':                 'No buttons yet',
+  'अवकाश (Leaves)':                          'Leaves',
+  'आज':                                      'Today',
+  'आज का रोस्टर':                            "Today's Roster",
+  'आज की स्थिति — सेक्शन वार':              "Today's Status — Section Wise",
+  'आप':                                      'You',
+  'आपकी Progress':                            'Your Progress',
+  'ऊपर Month चुनें':                         'Select Month above',
+  'कर्मचारी':                                'Employee',
+  'कर्मचारी का नाम':                         'Employee Name',
+  'कर्मचारी क्रम व Group बदलें':            'Reorder Employees & Groups',
+  'कल':                                      'Yesterday',
+  'काम का नाम (Title) *':                   'Task Name (Title) *',
+  'कारण (Reason)':                            'Reason',
+  'कारण * (अनिवार्य)':                       'Reason * (required)',
+  'कारण / Reason *':                          'Reason *',
+  'कारण लिखें':                              'Write reason',
+  'कार्य सूची — Task List':                  'Task List',
+  'कितने दिन के लिए?':                       'For how many days?',
+  'किसके लिए (Assign To)':                   'Assign To',
+  'किसी भी device से login करें':            'Login from any device',
+  'कुछ समय बाद दोबारा try करें।':            'Please try again later.',
+  'कुल':                                     'Total',
+  'कुल काम':                                 'Total Tasks',
+  'कोई OD रिकॉर्ड नहीं':                    'No OD records',
+  'कोई device request नहीं':                  'No device requests',
+  'कोई notification नहीं':                    'No notifications',
+  'कोई कर्मचारी नहीं मिला':                 'No employees found',
+  'कोई छुट्टी आवेदन नहीं':                   'No leave applications',
+  'कोई छुट्टी नहीं':                         'No leaves',
+  'कोई छुट्टी पेंडिंग नहीं':                'No leaves pending',
+  'कोई नया रजिस्ट्रेशन नहीं':                'No new registrations',
+  'कोई रिपोर्ट नहीं':                        'No reports',
+  'कोई रिपोर्ट पेंडिंग नहीं':                'No reports pending',
+  'छुट्टी का प्रकार':                        'Leave Type',
+  'जल्द आ रहा है!':                          'Coming soon!',
+  'ज़िम्मेदारी':                              'Responsibility',
+  'जाने का कारण':                             'Reason for leaving',
+  'जो कर्मचारी टीम छोड़ चुके हैं':           'Employees who left the team',
+  'टीम':                                     'Team',
+  'तक तारीख':                                'To Date',
+  'तारीख':                                   'Date',
+  'नई कीमत (₹)':                             'New Price (₹)',
+  'नए कर्मचारी':                             'New Employees',
+  'नया Device Detected':                      'New Device Detected',
+  'नया Device Login Request':                 'New Device Login Request',
+  'नाम':                                     'Name',
+  'पूरा शेड्यूल देखें →':                    'View Full Schedule →',
+  'प्रोफाइल नहीं मिली':                       'Profile not found',
+  'बाकी है':                                  'Remaining',
+  'भुगतान राशि':                             'Payment Amount',
+  'मशीन':                                    'Machine',
+  'महत्वपूर्ण निर्देश':                      'Important Instructions',
+  'महीना चुनें':                             'Select Month',
+  'मेटलाइज़र विभाग':                          'Metalliser Department',
+  'मेरी छुट्टियाँ':                          'My Leaves',
+  'मेरी शिफ्ट':                               'My Shift',
+  'यह वापस नहीं होगा!':                      'This cannot be undone!',
+  'यहाँ Excel फ़ाइल छोड़ें':                 'Drop Excel file here',
+  'रिपोर्ट':                                  'Report',
+  'रिपोर्ट का प्रकार':                       'Report Type',
+  'रिपोर्ट किसके बारे में':                  'Report About Whom',
+  'लोड नहीं हो सका':                          'Could not load',
+  'वापसी पर स्वागत है!':                     'Welcome Back!',
+  'विवरण (Description)':                      'Description',
+  'विवरण (Details)':                          'Details',
+  'विवरण / टिप्पणी (Optional)':              'Description / Note (Optional)',
+  'शिफ्ट में कमी':                            'Shift Shortage',
+  'शुरू की तारीख (Date A)':                  'Start Date (Date A)',
+  'संपर्क सूत्र':                             'Contact',
+  'सब Select करें':                          'Select All',
+  'सभी':                                     'All',
+  'सभी sessions साफ़ करें':                  'Clear all sessions',
+  'सीखें & Grow करें':                       'Learn & Grow',
+  'से तारीख':                                'From Date',
+  'सेक्शन':                                  'Section',
+  'स्थिति':                                  'Status',
+  'हो गया':                                   'Done',
+  '⏳ Access Extend करें':                    '⏳ Extend Access',
+  '⏳ जल्द आ रहा है':                         '⏳ Coming Soon',
+  '⏳ प्रतीक्षा में':                         '⏳ Waiting',
+  '⏳ फ़ाइल पढ़ रहे हैं...':                 '⏳ Reading file...',
+  '⏳ फ़ाइल पढ़ी जा रही है...':              '⏳ Reading file...',
+  '⏳ बाकी':                                  '⏳ Remaining',
+  '⏳ लोड हो रहा है...':                      '⏳ Loading...',
+  '⚠️ Salary column नहीं मिला':              '⚠️ Salary column not found',
+  '⚠️ कारण नहीं दिया गया':                  '⚠️ No reason given',
+  '⚠️ कोई Selfie नहीं':                       '⚠️ No Selfie',
+  '⚠️ कोई उपलब्ध Supervisor नहीं':            '⚠️ No Supervisor available',
+  '⚠️ यह कार्रवाई अपरिवर्तनीय है':           '⚠️ This action is irreversible',
+  '⚡ चेतावनी':                              '⚡ Warning',
+  '✅ दर्ज':                                  '✅ Filed',
+  '✅ पूरा':                                  '✅ Complete',
+  '✓ FREE — सभी के लिए':                     '✓ FREE — for everyone',
+  '❌ फ़ाइल में डेटा नहीं मिला':              '❌ No data found in file',
+  '❤️ Family — सबसे बड़ा Support':            '❤️ Family — biggest Support',
+  '➕ Content Add करें':                      '➕ Add Content',
+  '➕ नया Button जोड़ें':                    '➕ Add New Button',
+  '🌟 प्रशंसा':                              '🌟 Praise',
+  '🌴 Leave का कारण':                         '🌴 Leave Reason',
+  '🌴 छुट्टी आवेदन':                          '🌴 Leave Application',
+  '🎉 कोई भी Left नहीं हुआ':                 '🎉 Nobody has left',
+  '🎬 Video URL set नहीं है':                 '🎬 Video URL not set',
+  '👤 नए रजिस्ट्रेशन':                        '👤 New Registrations',
+  '👤 नया कर्मचारी':                          '👤 New Employee',
+  '💳 UPI से Pay करें':                       '💳 Pay via UPI',
+  '📅 तारीख':                                 '📅 Date',
+  '📅 मेरा शिफ्ट कैलेंडर':                   '📅 My Shift Calendar',
+  '📋 कारण':                                  '📋 Reason',
+  '📋 पूरी जानकारी (Details)':                '📋 Full Details',
+  '📋 रिपोर्ट':                              '📋 Report',
+  '📋 रिपोर्ट दर्ज करें':                    '📋 File Report',
+  '📌 विषय (Title)':                          '📌 Title',
+  '📝 C-Off कारण':                           '📝 C-Off Reason',
+  '📝 कारण (Reason)':                         '📝 Reason',
+  '📝 कोई कारण उपलब्ध नहीं है':              '📝 No reason available',
+  '📝 बदलाव pending हैं':                    '📝 Changes pending',
+  '📞 संपर्क सूत्र':                          '📞 Contact',
+  '📢 महत्वपूर्ण जानकारी':                   '📢 Important Information',
+  '📤 कर्मचारी List Upload करें':            '📤 Upload Employee List',
+  '📱 नए Device Requests':                    '📱 New Device Requests',
+  '📱 मोबाइल नंबर':                          '📱 Mobile Number',
+  '📱 मोबाइल नंबर (SMS के लिए)':             '📱 Mobile Number (for SMS)',
+  '📵 अनुपस्थित':                            '📵 Absent',
+  '📷 Photos जोड़ें (Optional)':              '📷 Add Photos (Optional)',
+  '🔄 OD रिकॉर्ड':                            '🔄 OD Records',
+  '🔄 लाइव सिंक · अंतिम अपडेट:':              '🔄 Live Sync · Last Update:',
+  '🔄 शिफ्ट पुनर्आवंटन':                     '🔄 Shift Reallocation',
+  '🔥 आज':                                    '🔥 Today',
+  '🙏 Seniors — जिनसे सीखा':                 '🙏 Seniors — who taught me',
+  '🤝 Colleagues — साथ काम किया':            '🤝 Colleagues — worked together',
+
+  // ── PHASE 3: Placeholders ──
+  '10 अंक का नंबर':                          '10-digit number',
+  'Button का नाम (जैसे: Safety Video)':       'Button name (e.g. Safety Video)',
+  'Leave का कारण लिखें...':                  'Write leave reason...',
+  'UNLOCK KEY डालें':                        'Enter UNLOCK KEY',
+  'अपना Fast2SMS API Key यहाँ डालें':       'Enter your Fast2SMS API Key here',
+  'अपना remark लिखें...':                    'Write your remark...',
+  'इस content के बारे में...':                'About this content...',
+  'काम का विवरण...':                         'Task description...',
+  'कारण लिखें...':                            'Write reason...',
+  'कोई अतिरिक्त जानकारी...':                  'Any additional info...',
+  'छुट्टी का कारण लिखें... (अनिवार्य)':      'Write leave reason... (required)',
+  'जैसे: M-1 pump check करना है':            'e.g. M-1 pump needs checking',
+  'जैसे: Metalliser Safety Training':         'e.g. Metalliser Safety Training',
+  'जैसे: कल से नई Shift Timing':             'e.g. New Shift Timing from tomorrow',
+  'नाम या कोड से खोजें...':                  'Search by name or code...',
+  'नियम लिखें...':                            'Write rule...',
+  'पूरा नाम (Full Name)':                    'Full Name',
+  'पूरी जानकारी लिखें... (मशीन नंबर, क्या हुआ, कब हुआ)': 'Write full details... (Machine no., what happened, when)',
+  'मोबाइल नंबर (10 digits)':                 'Mobile number (10 digits)',
+  'या कारण लिखें...':                         'Or write reason...',
+  'सभी जरूरी details यहाँ लिखें...':          'Write all required details here...',
+  '📌 Section का नाम':                        '📌 Section Name',
+};
+
+/**
+ * t(str) — translate a string based on current language.
+ * If _lang === 'en' and str exists in dictionary, returns English.
+ * Otherwise returns original. Safe for any string (Hindi or English).
+ */
+function t(str){
+  if(typeof _lang === 'undefined' || _lang !== 'en') return str;
+  if(!str || typeof str !== 'string') return str;
+  // Direct lookup
+  if(_i18n_HI_EN[str]) return _i18n_HI_EN[str];
+  // Try prefix match for strings with appended dynamic content (e.g. "✅ Login हो गया! Welcome NITISH")
+  for(const key of Object.keys(_i18n_HI_EN)){
+    if(key.length > 5 && str.startsWith(key)){
+      return _i18n_HI_EN[key] + str.slice(key.length);
+    }
+  }
+  return str;
+}
+
 function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  const t_el = document.getElementById('toast');
+  t_el.textContent = (typeof t === 'function') ? t(msg) : msg;
+  t_el.classList.add('show');
+  setTimeout(()=>t_el.classList.remove('show'),3000);
 }
 
 // ════════════════════════════════════════
@@ -12781,7 +13373,7 @@ async function loadScheduleBuilder(){
       <button onclick="openScheduleBuilder()" style="background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:12px">← बदलें</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-      <div style="font-size:11px;color:var(--muted2);flex:1">Cell tap करें: D → N → O → L → G → CO → ½ → Ab → साफ</div>
+      <div id="sbCellLegend" style="font-size:11px;color:var(--muted2);flex:1">Cell tap करें: D → N → O → L → G → CO → ½ → Ab → साफ</div>
       <button onclick="autoGenSchedule('${monthKey}')"
         style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;
         color:#fff;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;white-space:nowrap;
