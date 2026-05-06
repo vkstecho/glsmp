@@ -803,7 +803,7 @@ body.light .learn-screen [style*="color:var(--text)"] { color:#fff !important; -
 /* ── Multi-cell selection ── */
 .sched-tbl td.cell-selected span.shc{outline:2px solid #a78bfa !important;box-shadow:0 0 8px rgba(167,139,250,.7) !important;border-radius:4px;}
 .sched-tbl td.cell-selected{background:rgba(167,139,250,.12) !important;}
-#multiSelectBar{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:200;
+#multiSelectBar{position:fixed;bottom:240px;left:50%;transform:translateX(-50%);z-index:300;
   background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid rgba(167,139,250,.5);
   border-radius:18px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,.6);
   display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;max-width:96vw;}
@@ -4327,48 +4327,83 @@ function applyLang(){
  *   - Text nodes (only when their full trimmed text matches a dictionary key)
  *   - Input/textarea placeholders
  *   - Button title attributes
- * Idempotent and safe: stores original text in data attribute for reverse-translation.
+ *
+ * Smart caching: stores Hindi original in data-i18n-orig.
+ * - If current text matches a Hindi key → cache it as original
+ * - If current text matches an English value → look up Hindi key and cache that
+ * This way, regardless of which language app loads in, the Hindi original is correct.
  */
+let _i18n_EN_HI = null;
+function _buildReverseDict(){
+  if(_i18n_EN_HI) return _i18n_EN_HI;
+  _i18n_EN_HI = {};
+  for(const [hi, en] of Object.entries(_i18n_HI_EN)){
+    if(!_i18n_EN_HI[en]) _i18n_EN_HI[en] = hi;
+  }
+  return _i18n_EN_HI;
+}
+
 function _translateDOM(){
   if(typeof _i18n_HI_EN !== 'object') return;
   const isEn = _lang === 'en';
+  const enToHi = _buildReverseDict();
 
-  // Walk all elements that may contain visible text
   const SELECTOR = 'button, .chip, .nb, .submit-btn, .act-btn, .sched-admin-btn, .big-btn, .back-btn, label, h1, h2, h3, h4, .modal-title, .page-title, .empty-text, .stat-lbl, .sec-name, .lc-title, .lc-sub, .pc-nav-lbl, span, div, p, td, th, option';
   const nodes = document.querySelectorAll(SELECTOR);
   nodes.forEach(el => {
-    // Skip elements with children other than pure text (avoid corrupting markup)
+    // Skip elements with children (only translate pure-text leaves)
     if(el.children.length > 0) return;
-    const orig = (el.dataset.i18nOrig || el.textContent || '').trim();
-    if(!orig) return;
-    // Cache original on first encounter
-    if(!el.dataset.i18nOrig) el.dataset.i18nOrig = orig;
+    const current = (el.textContent || '').trim();
+    if(!current) return;
 
-    if(isEn){
-      const translated = _i18n_HI_EN[orig];
-      if(translated && el.textContent.trim() !== translated){
-        // Preserve any leading/trailing whitespace
-        el.textContent = el.textContent.replace(orig, translated);
+    // Determine the Hindi original for this element
+    let hiOrig = el.dataset.i18nOrig;
+    // Self-heal: if cached "original" is actually an English value (from older buggy cache),
+    // re-detect from the reverse dictionary
+    if(hiOrig && !_i18n_HI_EN[hiOrig] && enToHi[hiOrig]){
+      hiOrig = enToHi[hiOrig];
+      el.dataset.i18nOrig = hiOrig;
+    }
+    if(!hiOrig){
+      // First time seeing this element — figure out what its Hindi original is
+      if(_i18n_HI_EN[current]){
+        // Current text is a Hindi key in dictionary → that IS the original
+        hiOrig = current;
+      } else if(enToHi[current]){
+        // Current text is an English value → find the Hindi key
+        hiOrig = enToHi[current];
+      } else {
+        // Not in dictionary at all — leave as-is, don't cache
+        return;
       }
-    } else {
-      // Restore original Hindi
-      if(el.textContent.trim() !== el.dataset.i18nOrig){
-        el.textContent = el.dataset.i18nOrig;
-      }
+      el.dataset.i18nOrig = hiOrig;
+    }
+
+    // Apply translation based on current language
+    const target = isEn ? (_i18n_HI_EN[hiOrig] || hiOrig) : hiOrig;
+    if(current !== target){
+      el.textContent = el.textContent.replace(current, target);
     }
   });
 
   // Translate placeholder attributes
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
-    const orig = el.dataset.i18nPh || el.getAttribute('placeholder') || '';
-    if(!orig) return;
-    if(!el.dataset.i18nPh) el.dataset.i18nPh = orig;
-    if(isEn){
-      const translated = _i18n_HI_EN[orig];
-      if(translated) el.setAttribute('placeholder', translated);
-    } else {
-      el.setAttribute('placeholder', el.dataset.i18nPh);
+    const current = el.getAttribute('placeholder') || '';
+    if(!current) return;
+    let hiOrig = el.dataset.i18nPh;
+    // Self-heal cached English placeholder
+    if(hiOrig && !_i18n_HI_EN[hiOrig] && enToHi[hiOrig]){
+      hiOrig = enToHi[hiOrig];
+      el.dataset.i18nPh = hiOrig;
     }
+    if(!hiOrig){
+      if(_i18n_HI_EN[current]) hiOrig = current;
+      else if(enToHi[current]) hiOrig = enToHi[current];
+      else return;
+      el.dataset.i18nPh = hiOrig;
+    }
+    const target = isEn ? (_i18n_HI_EN[hiOrig] || hiOrig) : hiOrig;
+    if(current !== target) el.setAttribute('placeholder', target);
   });
 }
 setTimeout(applyLang, 200);
@@ -7528,6 +7563,16 @@ function _msUpdateBar(){
   }
   bar.style.display = 'flex';
   cnt.textContent = `${_msSelected.size} cell${_msSelected.size>1?'s':''} चुने`;
+
+  // ── Position dynamically above Save bar if it's visible ──
+  const saveBar = document.getElementById('schedSaveBar');
+  const saveBarVisible = saveBar && saveBar.offsetParent !== null && saveBar.style.display !== 'none';
+  if(saveBarVisible){
+    const saveBarHeight = saveBar.offsetHeight || 220;
+    bar.style.bottom = (saveBarHeight + 20) + 'px';
+  } else {
+    bar.style.bottom = '100px';
+  }
 }
 
 function clearMultiSelect(){
@@ -12393,9 +12438,16 @@ function _updateSaveBar(){
   const title = document.getElementById('saveBarTitle');
   const sub   = document.getElementById('saveBarSub');
   const entries = Object.values(_pendingShiftChanges);
-  if(!entries.length){ bar.style.display='none'; return; }
+  if(!entries.length){
+    bar.style.display='none';
+    // Also reposition multi-select bar if visible
+    if(typeof _msUpdateBar === 'function') setTimeout(_msUpdateBar, 0);
+    return;
+  }
 
   bar.style.display='block';
+  // After Save bar shows, reposition multi-select bar above it
+  if(typeof _msUpdateBar === 'function') setTimeout(_msUpdateBar, 50);
 
   // Count unique employees
   const empIds = [...new Set(entries.map(e=>e.empId))];
