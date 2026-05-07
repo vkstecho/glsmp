@@ -3500,6 +3500,19 @@ const SEC = {
   MGR:{label:'Manager',     hi:'मैनेजर',     color:'var(--mgr)',bg:'var(--mgrbg)',icon:'🎯',machine:'ALL',type:'mgr'},
 };
 
+/**
+ * secName(secKey) — returns section name in current language.
+ * In English mode: "Metalliser-1", "Slitter-1", etc.
+ * In Hindi mode: "मेटलाइज़र-1", "स्लिटर-1", etc.
+ * Falls back to section key if not found.
+ */
+function secName(sec){
+  if(!sec) return '';
+  const s = SEC[sec];
+  if(!s) return sec;
+  return (typeof _lang !== 'undefined' && _lang === 'en') ? s.label : s.hi;
+}
+
 const REPORT_TYPES = {
   ncr:          { ico:'⚠️', label:'NCR रिपोर्ट',       color:'#f87171', bg:'rgba(239,68,68,.1)' },
   absent:       { ico:'📵', label:'अनुपस्थिति',         color:'var(--night)', bg:'rgba(129,140,248,.1)' },
@@ -4310,9 +4323,14 @@ function applyLang(){
     ? 'Cell tap: D → N → O → L → G → CO → ½ → Ab → clear'
     : 'Cell tap करें: D → N → O → L → G → CO → ½ → Ab → साफ';
 
-  // Re-render home if on home tab
+  // Re-render home if on home tab — wait for it to finish, then re-walk DOM
   if(typeof _currentTab !== 'undefined' && _currentTab === 'home'){
-    try{ renderHome(); }catch(e){}
+    try{
+      const r = renderHome();
+      if(r && typeof r.then === 'function'){
+        r.then(()=>{ try{ _translateDOM(); }catch(e){} });
+      }
+    }catch(e){}
   }
 
   // ── PHASE 3: DOM walker — translate ALL text nodes & placeholders ──
@@ -4895,7 +4913,7 @@ function onCodeInput(val){
     const match=getEmps().find(e=>e.empId&&e.empId.trim().toUpperCase()===val.toUpperCase());
     if(hint){
       if(match)
-        hint.innerHTML='<span style="color:var(--green)">✅ '+match.name+' — '+(SEC[match.sec]?.hi||match.sec||'GLS')+'</span>';
+        hint.innerHTML='<span style="color:var(--green)">✅ '+match.name+' — '+(secName(match.sec)||'GLS')+'</span>';
       else
         hint.innerHTML='<span style="color:#f97316">🔆 नया Employee — Registration होगा</span>';
     }
@@ -5103,7 +5121,7 @@ function showLoginApprovalOverlay(emp, existingReg){
   let ov=document.getElementById('loginApprovalOverlay');
   if(!ov){ ov=document.createElement('div'); ov.id='loginApprovalOverlay'; document.body.appendChild(ov); }
   ov.style.cssText='position:fixed;inset:0;z-index:9000;background:#0a0f1a;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  const secLabel=SEC[emp.sec]?.hi||emp.sec||'GLS';
+  const secLabel=secName(emp.sec)||'GLS';
   window._laEmp=emp; window._laExistingReg=existingReg; window._laSelfieData=null;
   ov.innerHTML=`
     <div style="width:100%;max-width:360px">
@@ -5197,7 +5215,7 @@ async function submitLoginWithSelfie(){
 
   // Show waiting screen
   const ov=document.getElementById('loginApprovalOverlay');
-  const secLabel=SEC[emp.sec]?.hi||emp.sec||'GLS';
+  const secLabel=secName(emp.sec)||'GLS';
   if(ov) ov.innerHTML=`
     <div style="width:100%;max-width:360px;text-align:center">
       <div style="font-size:52px;margin-bottom:10px">&#128241;</div>
@@ -6306,7 +6324,7 @@ async function showProfile(){
     const icon  = daysLeft<=0?'🔴':daysLeft<=7?'⚠️':'🟢';
     const msg   = daysLeft<=0?'Validity Expire हो गई — Admin से मिलें':daysLeft<=7?`सिर्फ ${daysLeft} दिन बाकी — जल्दी Admin से मिलें`:`${daysLeft} दिन बाकी`;
     const empRec = myEmp();
-    const secLabel = empRec ? (SEC[empRec.sec]?.hi || empRec.sec) : '';
+    const secLabel = empRec ? (secName(empRec.sec) || empRec.sec) : '';
     const roleLabel = isMgr()?'🏅 Manager':isSupervisor()?'👁️ Supervisor':'👤 User';
     openModal(`<div class="modal-handle"></div>
     <div style="text-align:center;padding:10px 0">
@@ -6386,8 +6404,10 @@ function _goTabDirect(t){
   if(t==='pending')      renderPending();
   if(t==='team')         renderTeam();
   if(t==='instructions') renderInstructions();
-  // Re-apply language so any newly-rendered elements get translated
+  // Re-apply language so any newly-rendered elements get translated.
+  // Run twice — once immediately, once after async renders settle.
   try{ if(typeof applyLang === 'function') applyLang(); }catch(e){}
+  setTimeout(()=>{ try{ if(typeof _translateDOM === 'function') _translateDOM(); }catch(e){} }, 250);
 }
 
 function goTab(t){
@@ -6632,7 +6652,7 @@ async function renderHome(){
         <div class="card-row">
           <div style="flex:1">
             <div class="card-name">${e.name}${isMe?' <span style="font-size:10px;color:var(--m1)">(आप)</span>':''}</div>
-            <div class="card-sub">${SEC[e.sec]?.hi||e.sec} · ${e.empId||'—'}</div>
+            <div class="card-sub">${secName(e.sec)} · ${e.empId||'—'}</div>
           </div>
           <span class="shc ${cellClass(sh)}">${cellDisp(sh)}</span>
         </div>
@@ -8677,7 +8697,7 @@ function showWarnModal(leave, suggestions, leaveKey){
   <div style="font-size:13px;color:var(--text);margin-bottom:12px">नीचे दी गई तारीखों में मैनपावर कम हो जाएगा:</div>
   ${suggestions.map(s=>`<div class="card" style="margin-bottom:8px">
     <div style="font-size:13px;font-weight:700;color:var(--lv)">${fmtDate(s.date)} · ${s.shift==='D'?'दिन':'रात'} शिफ्ट</div>
-    <div style="font-size:12px;color:var(--muted2);margin-top:4px">${SEC[s.section]?.hi} में न्यूनतम से कम होगा</div>
+    <div style="font-size:12px;color:var(--muted2);margin-top:4px">${secName(s.section)} में न्यूनतम से कम होगा</div>
     ${s.supervisor?`<div class="suggestion-card">
       <div class="suggestion-name">💡 सुझाव: ${s.supervisor.name}</div>
       <div class="suggestion-reason">${
@@ -8789,7 +8809,7 @@ function openResignationForm(){
   const canSelectAny = isAdmin() || isMgr();
   
   const empOptions = canSelectAny
-    ? emps.map(e=>`<option value="${e.id}">${e.name} (${e.empId||'—'} · ${SEC[e.sec]?.hi||e.sec})</option>`).join('')
+    ? emps.map(e=>`<option value="${e.id}">${e.name} (${e.empId||'—'} · ${secName(e.sec)})</option>`).join('')
     : `<option value="${me?.id||''}">${me?.name||SESSION.name}</option>`;
   
   const reasonOptions = RESIGN_REASONS.map(r=>`<option value="${r.v}">${r.label}</option>`).join('');
@@ -9306,7 +9326,7 @@ function renderReports(){
         <div class="card-body">
           ${nameDisplay}
           <div class="card-tags" style="margin-top:5px;gap:5px">
-            <span class="badge ${r.section||'M1'}">${SEC[r.section]?.hi||'—'}</span>
+            <span class="badge ${r.section||'M1'}">${secName(r.section)||'—'}</span>
             <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;background:${rt.bg};color:${rt.color}">${rt.label}</span>
             ${ncrLabel}
             ${!isLegacy?`<span class="badge ${r.status}">${{pending:'⏳ प्रतीक्षा',approved:'✅ मंजूर',rejected:'❌ अस्वीकार'}[r.status]||r.status}</span>`:'<span class="badge approved">✅ दर्ज</span>'}
@@ -9421,7 +9441,7 @@ async function renderODRecords(){
 
 function openReportForm(){
   const emps=getEmps();
-  const empOptions=emps.map(e=>`<option value="${e.id}|${e.name}|${e.sec}">${e.name} (${SEC[e.sec]?.hi||e.sec})</option>`).join('');
+  const empOptions=emps.map(e=>`<option value="${e.id}|${e.name}|${e.sec}">${e.name} (${secName(e.sec)})</option>`).join('');
 
   openModal(`<div class="modal-handle"></div>
   <div class="modal-title">📋 रिपोर्ट दर्ज करें</div>
@@ -9804,7 +9824,7 @@ function renderPending(){
             <div class="card-ico" style="background:rgba(249,115,22,.15)">&#128241;</div>
             <div class="card-body">
               <div class="card-name">${v.empName}</div>
-              <div class="card-sub">Code: ${v.empId} · ${SEC[v.empSec]?.hi||v.empSec||'GLS'}${v.phone?' · 📱 '+v.phone:''}</div>
+              <div class="card-sub">Code: ${v.empId} · ${secName(v.empSec)||'GLS'}${v.phone?' · 📱 '+v.phone:''}</div>
               <div class="card-meta">${new Date(v.requestedAt).toLocaleString('hi-IN')}</div>
               ${v.isNewReg?'<div style="font-size:11px;color:#f97316;font-weight:700">&#128100; Newly Registered Employee</div>':''}
               ${v.selfieUrl?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><img src="${v.selfieUrl}" style="width:72px;height:72px;border-radius:10px;object-fit:cover;border:2px solid rgba(249,115,22,.5);cursor:pointer" onclick="window.open('${v.selfieUrl}','_blank')"><span style="font-size:11px;color:#94a3b8">📸 Selfie<br><span style="font-size:10px;color:#64748b">Tap to zoom</span></span></div>`:'<div style="margin-top:6px;font-size:11px;color:#f43f5e">⚠️ कोई Selfie नहीं</div>'}
@@ -9827,7 +9847,7 @@ function renderPending(){
         <div class="card-ico" style="background:${r.isExternal?'rgba(56,189,248,.12)':'var(--daybg)'}">${r.isExternal?(r.companyIco||'🏢'):'👤'}</div>
         <div class="card-body">
           <div class="card-name">${r.name||r.empId}</div>
-          <div class="card-sub">Code: ${r.empId} · ${SEC[r.sec]?.hi||r.dept||''} ${r.phone?'· 📱 '+r.phone:''}</div>
+          <div class="card-sub">Code: ${r.empId} · ${secName(r.sec)||r.dept||''} ${r.phone?'· 📱 '+r.phone:''}</div>
           <div class="card-meta">${new Date(r.requestedAt).toLocaleString('hi-IN')}</div>
           ${r.selfieUrl?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><img src="${r.selfieUrl}" style="width:72px;height:72px;border-radius:10px;object-fit:cover;border:2px solid rgba(249,115,22,.5);cursor:pointer" onclick="window.open('${r.selfieUrl}','_blank')"><span style="font-size:11px;color:#94a3b8">📸 Selfie<br><span style="font-size:10px;color:#64748b">Tap to zoom</span></span></div>`:'<div style="margin-top:6px;font-size:11px;color:#f43f5e">⚠️ कोई Selfie नहीं</div>'}
         </div>
@@ -9967,7 +9987,7 @@ function renderTeam(search=''){
   // Show total count
   const totalLabel = _teamSec === 'ALL' 
     ? `कुल <b style="color:var(--m1)">${list.length}</b> कर्मचारी (Active — Schedule में)` 
-    : `${SEC[_teamSec]?.hi||_teamSec}: <b style="color:var(--m1)">${list.length}</b> / ${totalAll} कुल`;
+    : `${secName(_teamSec)}: <b style="color:var(--m1)">${list.length}</b> / ${totalAll} कुल`;
   
   const countDiv = document.getElementById('teamCount');
   if(countDiv) countDiv.innerHTML = totalLabel;
@@ -18202,7 +18222,7 @@ function openTodoForm(editId){
     _todoFormImages=[...(existing.images||[])];
   }
   const emps=getEmps();
-  const empOptions=emps.map(e=>`<option value="${escHtml(e.id)}|${escHtml(e.name)}" ${existing.assignedToEmpId===e.id?'selected':''}>${escHtml(e.name)} — ${escHtml(SEC[e.sec]?.hi||e.sec)}</option>`).join('');
+  const empOptions=emps.map(e=>`<option value="${escHtml(e.id)}|${escHtml(e.name)}" ${existing.assignedToEmpId===e.id?'selected':''}>${escHtml(e.name)} — ${escHtml(secName(e.sec))}</option>`).join('');
   const secOptions=Object.entries(SEC).map(([k,s])=>`<option value="${k}" ${existing.section===k?'selected':''}>${s.hi}</option>`).join('');
 
   openModal(`<div class="modal-handle"></div>
