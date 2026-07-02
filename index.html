@@ -3480,7 +3480,7 @@ async function initAdminAuth(){
 
 // ── CONFIG ──
 const CFG = {
-  license:   { expiry: new Date(2026,5,30), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2026,11,31) },
+  license:   { expiry: new Date(2026,11,31), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2027,11,31) },
   // SECURITY: Admin credentials checked ONLY via Firebase adminAuth — not hardcoded
   adminCreds:[], // Empty — all auth goes through Firebase
   supervisorInstructor: 'MOHIT',
@@ -4823,12 +4823,47 @@ function checkLicense(){
 }
 async function tryUnlock(){
   const k=(document.getElementById('unlockKey').value||'').trim();
+  if(!k){ toast('⚠️ Key डालें'); return; }
+
+  // ── 1. Check master / extend keys (original system) ──
   const kh = await hashPass(k);
   if(kh===CFG.license.masterKey||kh===CFG.license.extendKey){
     if(kh===CFG.license.extendKey) CFG.license.expiry=CFG.license.extendTo;
     document.getElementById('expiryScreen').classList.remove('show');
     toast('✅ अनलॉक हो गया');
-  } else { toast('❌ गलत Key'); }
+    return;
+  }
+
+  // ── 2. Check GLS per-user generated key format: GLS-{EMPID}-{EPOCHDAYS}-{CHECKSUM8} ──
+  const parts = k.toUpperCase().split('-');
+  if(parts.length === 4 && parts[0] === 'GLS'){
+    try{
+      const shortId   = parts[1];
+      const epochDays = parseInt(parts[2]);
+      const checksum  = parts[3];
+      if(!isNaN(epochDays) && shortId && checksum.length === 8){
+        const _SECRET = 'GLSMP_VKS_2025';
+        const raw = `${_SECRET}:${shortId}:${epochDays}`;
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+        const computed = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').substring(0,8).toUpperCase();
+        if(computed === checksum){
+          const expMs = epochDays * 86400000;
+          if(Date.now() > expMs){
+            toast('❌ यह Key expire हो गई है — Admin से नई Key लें');
+            return;
+          }
+          // Valid! Extend app license to key's expiry
+          CFG.license.expiry = new Date(expMs);
+          document.getElementById('expiryScreen').classList.remove('show');
+          const expStr = new Date(expMs).toLocaleDateString('hi-IN',{day:'numeric',month:'long',year:'numeric'});
+          toast(`✅ अनलॉक हो गया! Valid till: ${expStr}`);
+          return;
+        }
+      }
+    }catch(e){ console.warn('[tryUnlock GLS key]', e); }
+  }
+
+  toast('❌ गलत Key — Admin से सही Key लें');
 }
 
 // ════════════════════════════════════════
@@ -10370,6 +10405,24 @@ async function loadDeviceManagerContent(empId, empName){
           </div>`:''}
       </div>
 
+      <!-- 🔑 Unlock Key Generator -->
+      <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:800;color:#a855f7;letter-spacing:.5px;margin-bottom:10px">🔑 UNLOCK KEY GENERATOR</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6">User को यह key दें — वो इसे "UNLOCK KEY डालें" box में डालकर app unlock कर सकते हैं।</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <button onclick="generateUnlockKey('${empId}','${empName}',90)" style="padding:10px 6px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:9px;color:#f97316;font-size:12px;font-weight:700;cursor:pointer">🔓 90 दिन Key</button>
+          <button onclick="generateUnlockKey('${empId}','${empName}',180)" style="padding:10px 6px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.35);border-radius:9px;color:#f97316;font-size:12px;font-weight:700;cursor:pointer">🔓 180 दिन Key</button>
+          <button onclick="generateUnlockKey('${empId}','${empName}',365)" style="padding:10px 6px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:9px;color:#a855f7;font-size:12px;font-weight:700;cursor:pointer">🔓 1 साल Key</button>
+          <button onclick="generateUnlockKey('${empId}','${empName}',730)" style="padding:10px 6px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:9px;color:#a855f7;font-size:12px;font-weight:700;cursor:pointer">🔓 2 साल Key</button>
+        </div>
+        <div id="genKeyResult_${empId}" style="display:none;background:#0f172a;border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px;margin-top:4px">
+          <div style="font-size:11px;color:#64748b;margin-bottom:6px">Generated Key — Copy करें और user को दें:</div>
+          <div id="genKeyText_${empId}" style="font-family:monospace;font-size:15px;font-weight:900;color:#a855f7;letter-spacing:2px;word-break:break-all;margin-bottom:10px;text-align:center"></div>
+          <div style="font-size:10px;color:#64748b;margin-bottom:10px" id="genKeyExpNote_${empId}"></div>
+          <button onclick="copyUnlockKey('${empId}')" style="width:100%;padding:10px;background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.4);border-radius:8px;color:#a855f7;font-size:13px;font-weight:700;cursor:pointer">📋 Key Copy करें</button>
+        </div>
+      </div>
+
       <!-- Login History -->
       <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:14px">
         <div style="font-size:12px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:8px">LOGIN REQUESTS (${myLoginReqs.length} total · ${pendingReqs.length} pending)</div>
@@ -10406,6 +10459,55 @@ async function adminExtendExpiry(empId, empName, days){
   }catch(e){ toast('❌ Error: '+e.message); }
 }
 
+
+// ════════════════════════════════════════════════════════════════
+// 🔑 UNLOCK KEY GENERATOR — Admin se per-user time-based key
+// Format: GLS-{shortEmpId}-{epochDays}-{checksum8}
+// ════════════════════════════════════════════════════════════════
+const _UNLOCK_SECRET = 'GLSMP_VKS_2025';
+
+async function _computeKeyChecksum(shortId, epochDays){
+  const raw = `${_UNLOCK_SECRET}:${shortId}:${epochDays}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').substring(0,8).toUpperCase();
+}
+
+async function generateUnlockKey(empObjId, empName, days){
+  try{
+    const expDate = new Date(Date.now() + days * 86400000);
+    expDate.setHours(23,59,59,0);
+    const epochDays = Math.floor(expDate.getTime() / 86400000);
+    const emp = (getEmps()||[]).find(e=>e.id===empObjId);
+    const shortId = (emp?.empId || empObjId).replace(/[^A-Z0-9]/gi,'').toUpperCase().substring(0,6);
+    const checksum = await _computeKeyChecksum(shortId, epochDays);
+    const key = `GLS-${shortId}-${epochDays}-${checksum}`;
+    const resultDiv = document.getElementById('genKeyResult_'+empObjId);
+    const keyText   = document.getElementById('genKeyText_'+empObjId);
+    const noteText  = document.getElementById('genKeyExpNote_'+empObjId);
+    if(resultDiv && keyText && noteText){
+      keyText.textContent = key;
+      noteText.textContent = `Valid till: ${expDate.toLocaleDateString('hi-IN',{day:'numeric',month:'long',year:'numeric'})} (${days} दिन)`;
+      resultDiv.style.display = 'block';
+    }
+    await fbPush('unlockKeyLog/'+empObjId, {key, days, empName, generatedBy: SESSION.name, generatedAt: new Date().toISOString(), validTill: expDate.toISOString()}).catch(()=>{});
+    await fbUpdate('deviceApprovals/'+empObjId, {validTill: expDate.toISOString(), extendedBy: SESSION.name, extendedAt: new Date().toISOString()}).catch(()=>{});
+    toast(`✅ ${empName} के लिए ${days} दिन की Key generate हुई!`);
+  }catch(e){ toast('❌ Error: '+e.message); }
+}
+
+function copyUnlockKey(empObjId){
+  const keyEl = document.getElementById('genKeyText_'+empObjId);
+  if(!keyEl || !keyEl.textContent) return;
+  navigator.clipboard.writeText(keyEl.textContent).then(()=>{
+    toast('📋 Key copy हो गई! User को WhatsApp/SMS पर भेजें।');
+  }).catch(()=>{
+    const range = document.createRange();
+    range.selectNode(keyEl);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    toast('Key select हो गई — अब Copy करें');
+  });
+}
 async function adminRemoveDevice(empId, empName){
   const ok = await confirmModal('Device हटाएं?', `<b>${empName}</b> का device हटाया जाएगा।<br>Login के लिए Admin approval लेनी होगी।`, '🗑️ हाँ, हटाएं', 'रद्द करें');
   if(!ok) return;
