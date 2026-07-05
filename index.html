@@ -3480,7 +3480,7 @@ async function initAdminAuth(){
 
 // ── CONFIG ──
 const CFG = {
-  license:   { expiry: new Date(2026,11,31), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2027,11,31) },
+  license:   { expiry: new Date(2026,11,31), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2026,11,31) },
   // SECURITY: Admin credentials checked ONLY via Firebase adminAuth — not hardcoded
   adminCreds:[], // Empty — all auth goes through Firebase
   supervisorInstructor: 'MOHIT',
@@ -4823,47 +4823,12 @@ function checkLicense(){
 }
 async function tryUnlock(){
   const k=(document.getElementById('unlockKey').value||'').trim();
-  if(!k){ toast('⚠️ Key डालें'); return; }
-
-  // ── 1. Check master / extend keys (original system) ──
   const kh = await hashPass(k);
   if(kh===CFG.license.masterKey||kh===CFG.license.extendKey){
     if(kh===CFG.license.extendKey) CFG.license.expiry=CFG.license.extendTo;
     document.getElementById('expiryScreen').classList.remove('show');
     toast('✅ अनलॉक हो गया');
-    return;
-  }
-
-  // ── 2. Check GLS per-user generated key format: GLS-{EMPID}-{EPOCHDAYS}-{CHECKSUM8} ──
-  const parts = k.toUpperCase().split('-');
-  if(parts.length === 4 && parts[0] === 'GLS'){
-    try{
-      const shortId   = parts[1];
-      const epochDays = parseInt(parts[2]);
-      const checksum  = parts[3];
-      if(!isNaN(epochDays) && shortId && checksum.length === 8){
-        const _SECRET = 'GLSMP_VKS_2025';
-        const raw = `${_SECRET}:${shortId}:${epochDays}`;
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
-        const computed = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').substring(0,8).toUpperCase();
-        if(computed === checksum){
-          const expMs = epochDays * 86400000;
-          if(Date.now() > expMs){
-            toast('❌ यह Key expire हो गई है — Admin से नई Key लें');
-            return;
-          }
-          // Valid! Extend app license to key's expiry
-          CFG.license.expiry = new Date(expMs);
-          document.getElementById('expiryScreen').classList.remove('show');
-          const expStr = new Date(expMs).toLocaleDateString('hi-IN',{day:'numeric',month:'long',year:'numeric'});
-          toast(`✅ अनलॉक हो गया! Valid till: ${expStr}`);
-          return;
-        }
-      }
-    }catch(e){ console.warn('[tryUnlock GLS key]', e); }
-  }
-
-  toast('❌ गलत Key — Admin से सही Key लें');
+  } else { toast('❌ गलत Key'); }
 }
 
 // ════════════════════════════════════════
@@ -10405,24 +10370,6 @@ async function loadDeviceManagerContent(empId, empName){
           </div>`:''}
       </div>
 
-      <!-- 🔑 Unlock Key Generator -->
-      <div style="background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:14px;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:800;color:#a855f7;letter-spacing:.5px;margin-bottom:10px">🔑 UNLOCK KEY GENERATOR</div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6">User को यह key दें — वो इसे "UNLOCK KEY डालें" box में डालकर app unlock कर सकते हैं।</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <button onclick="generateUnlockKey('${empId}','${empName}',90)" style="padding:10px 6px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:9px;color:#f97316;font-size:12px;font-weight:700;cursor:pointer">🔓 90 दिन Key</button>
-          <button onclick="generateUnlockKey('${empId}','${empName}',180)" style="padding:10px 6px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.35);border-radius:9px;color:#f97316;font-size:12px;font-weight:700;cursor:pointer">🔓 180 दिन Key</button>
-          <button onclick="generateUnlockKey('${empId}','${empName}',365)" style="padding:10px 6px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:9px;color:#a855f7;font-size:12px;font-weight:700;cursor:pointer">🔓 1 साल Key</button>
-          <button onclick="generateUnlockKey('${empId}','${empName}',730)" style="padding:10px 6px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:9px;color:#a855f7;font-size:12px;font-weight:700;cursor:pointer">🔓 2 साल Key</button>
-        </div>
-        <div id="genKeyResult_${empId}" style="display:none;background:#0f172a;border:1px solid rgba(168,85,247,.3);border-radius:10px;padding:12px;margin-top:4px">
-          <div style="font-size:11px;color:#64748b;margin-bottom:6px">Generated Key — Copy करें और user को दें:</div>
-          <div id="genKeyText_${empId}" style="font-family:monospace;font-size:15px;font-weight:900;color:#a855f7;letter-spacing:2px;word-break:break-all;margin-bottom:10px;text-align:center"></div>
-          <div style="font-size:10px;color:#64748b;margin-bottom:10px" id="genKeyExpNote_${empId}"></div>
-          <button onclick="copyUnlockKey('${empId}')" style="width:100%;padding:10px;background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.4);border-radius:8px;color:#a855f7;font-size:13px;font-weight:700;cursor:pointer">📋 Key Copy करें</button>
-        </div>
-      </div>
-
       <!-- Login History -->
       <div style="background:#0f172a;border:1px solid #334155;border-radius:12px;padding:14px">
         <div style="font-size:12px;font-weight:800;color:#64748b;letter-spacing:.5px;margin-bottom:8px">LOGIN REQUESTS (${myLoginReqs.length} total · ${pendingReqs.length} pending)</div>
@@ -10459,55 +10406,6 @@ async function adminExtendExpiry(empId, empName, days){
   }catch(e){ toast('❌ Error: '+e.message); }
 }
 
-
-// ════════════════════════════════════════════════════════════════
-// 🔑 UNLOCK KEY GENERATOR — Admin se per-user time-based key
-// Format: GLS-{shortEmpId}-{epochDays}-{checksum8}
-// ════════════════════════════════════════════════════════════════
-const _UNLOCK_SECRET = 'GLSMP_VKS_2025';
-
-async function _computeKeyChecksum(shortId, epochDays){
-  const raw = `${_UNLOCK_SECRET}:${shortId}:${epochDays}`;
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').substring(0,8).toUpperCase();
-}
-
-async function generateUnlockKey(empObjId, empName, days){
-  try{
-    const expDate = new Date(Date.now() + days * 86400000);
-    expDate.setHours(23,59,59,0);
-    const epochDays = Math.floor(expDate.getTime() / 86400000);
-    const emp = (getEmps()||[]).find(e=>e.id===empObjId);
-    const shortId = (emp?.empId || empObjId).replace(/[^A-Z0-9]/gi,'').toUpperCase().substring(0,6);
-    const checksum = await _computeKeyChecksum(shortId, epochDays);
-    const key = `GLS-${shortId}-${epochDays}-${checksum}`;
-    const resultDiv = document.getElementById('genKeyResult_'+empObjId);
-    const keyText   = document.getElementById('genKeyText_'+empObjId);
-    const noteText  = document.getElementById('genKeyExpNote_'+empObjId);
-    if(resultDiv && keyText && noteText){
-      keyText.textContent = key;
-      noteText.textContent = `Valid till: ${expDate.toLocaleDateString('hi-IN',{day:'numeric',month:'long',year:'numeric'})} (${days} दिन)`;
-      resultDiv.style.display = 'block';
-    }
-    await fbPush('unlockKeyLog/'+empObjId, {key, days, empName, generatedBy: SESSION.name, generatedAt: new Date().toISOString(), validTill: expDate.toISOString()}).catch(()=>{});
-    await fbUpdate('deviceApprovals/'+empObjId, {validTill: expDate.toISOString(), extendedBy: SESSION.name, extendedAt: new Date().toISOString()}).catch(()=>{});
-    toast(`✅ ${empName} के लिए ${days} दिन की Key generate हुई!`);
-  }catch(e){ toast('❌ Error: '+e.message); }
-}
-
-function copyUnlockKey(empObjId){
-  const keyEl = document.getElementById('genKeyText_'+empObjId);
-  if(!keyEl || !keyEl.textContent) return;
-  navigator.clipboard.writeText(keyEl.textContent).then(()=>{
-    toast('📋 Key copy हो गई! User को WhatsApp/SMS पर भेजें।');
-  }).catch(()=>{
-    const range = document.createRange();
-    range.selectNode(keyEl);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-    toast('Key select हो गई — अब Copy करें');
-  });
-}
 async function adminRemoveDevice(empId, empName){
   const ok = await confirmModal('Device हटाएं?', `<b>${empName}</b> का device हटाया जाएगा।<br>Login के लिए Admin approval लेनी होगी।`, '🗑️ हाँ, हटाएं', 'रद्द करें');
   if(!ok) return;
@@ -13391,172 +13289,158 @@ const SHIFT_QUICK = ['D','N','O','L','G','C/O','HLF','Ab'];
 
 function openScheduleBuilder(){
   const now = new Date();
-  const nextMonth = new Date(now.getFullYear(), now.getMonth()+1, 1);
-  // FIX: Use local date parts — toISOString() converts to UTC which shifts months in IST
-  const defaultKey = nextMonth.getFullYear()+'-'+String(nextMonth.getMonth()+1).padStart(2,'0');
-  const months = [];
-  for(let i=-1; i<=6; i++){
-    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
-    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    const label = d.toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
-    months.push({key, label});
-  }
-  const monthOpts = months.map(m=>`<option value="${m.key}"${m.key===defaultKey?' selected':''}>${m.label}</option>`).join('');
-  
+  const nm  = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  const nme = new Date(now.getFullYear(), now.getMonth()+2, 0);
+  const fmt = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   openModal(`<div class="modal-handle"></div>
-    <div class="modal-title">📋 Schedule Builder</div>
-    <div class="field" style="margin-bottom:16px">
-      <label>महीना चुनें</label>
-      <select class="inp-field" id="sb_month">${monthOpts}</select>
+    <div class="modal-title">📋 Schedule बनाएं</div>
+    <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#f97316">
+      📅 जिस date से जिस date तक schedule बनानी हो वो range चुनें
     </div>
-    <div class="field" style="margin-bottom:16px">
-      <label>Section</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">📅 शुरुआत</label>
+        <input type="date" class="inp-field" id="sb_startDate" value="${fmt(nm)}" style="font-size:13px;padding:10px">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">📅 आखिरी</label>
+        <input type="date" class="inp-field" id="sb_endDate" value="${fmt(nme)}" style="font-size:13px;padding:10px">
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;color:var(--muted2);display:block;margin-bottom:4px">Section</label>
       <select class="inp-field" id="sb_sec">
         <option value="ALL">सभी Section</option>
-        ${Object.entries(SEC).map(([k,v])=>`<option value="${k}">${v.hi}</option>`).join('')}
+        ${Object.entries(SEC).map(([k,v])=>`<option value="${k}">${v.hi}</option>`).join("")}
       </select>
     </div>
-    <button class="submit-btn" onclick="loadScheduleBuilder()">📋 Schedule खोलें</button>
-    <button class="cancel-btn" onclick="closeModal()">रद्द करें</button>`);
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+      <button onclick="_sbQuick('thisMonth')" style="padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer">इस महीने</button>
+      <button onclick="_sbQuick('nextMonth')" style="padding:8px 4px;border-radius:8px;border:1px solid #f97316;background:rgba(249,115,22,.08);color:#f97316;font-size:11px;font-weight:700;cursor:pointer">अगले महीने</button>
+      <button onclick="_sbQuick('next15')"   style="padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer">अगले 15 दिन</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="submit-btn" style="flex:1" onclick="_sbOpen()">📋 Schedule खोलें</button>
+      <button class="cancel-btn" style="flex:1" onclick="closeModal()">रद्द करें</button>
+    </div>`);
+}
+
+function _sbQuick(type){
+  const now=new Date();
+  const fmt=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  let s,e;
+  if(type==="thisMonth"){s=new Date(now.getFullYear(),now.getMonth(),1);e=new Date(now.getFullYear(),now.getMonth()+1,0);}
+  else if(type==="nextMonth"){s=new Date(now.getFullYear(),now.getMonth()+1,1);e=new Date(now.getFullYear(),now.getMonth()+2,0);}
+  else{s=new Date(now);s.setDate(now.getDate()+1);e=new Date(now);e.setDate(now.getDate()+15);}
+  document.getElementById("sb_startDate").value=fmt(s);
+  document.getElementById("sb_endDate").value=fmt(e);
+}
+
+function _sbOpen(){
+  const sv=document.getElementById("sb_startDate").value;
+  const ev=document.getElementById("sb_endDate").value;
+  if(!sv||!ev){toast("⚠️ तारीख चुनें");return;}
+  const s=new Date(sv),e=new Date(ev);
+  if(s>e){toast("⚠️ शुरुआत की तारीख आखिरी से पहले होनी चाहिए");return;}
+  if(Math.round((e-s)/86400000)>90){toast("⚠️ अधिकतम 90 दिन का range चुनें");return;}
+  loadScheduleBuilder(sv,ev);
 }
 
 const WOFF_DOW = {SUN:0,MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6};
 
-async function loadScheduleBuilder(){
+async function loadScheduleBuilder(startDateStr, endDateStr){
   try{
-  const monthKey = document.getElementById('sb_month').value;
-  const secFilter = document.getElementById('sb_sec').value;
-  if(!monthKey){toast('⚠️ महीना चुनें');return;}
-  const [yr, mo] = monthKey.split('-').map(Number);
-  const daysInMonth = new Date(yr, mo, 0).getDate();
-  const dayNums = Array.from({length: daysInMonth}, (_,i)=>i+1);
+  const secFilter=(document.getElementById("sb_sec")&&document.getElementById("sb_sec").value)||(_sbMeta._lastSec||"ALL");
+  const startD=new Date(startDateStr), endD=new Date(endDateStr);
+  const allDates=[];
+  for(let d=new Date(startD);d<=endD;d.setDate(d.getDate()+1)) allDates.push(new Date(d));
+  _sbMeta={startDate:startDateStr,endDate:endDateStr,dates:allDates,_lastSec:secFilter};
 
-  // Load existing saved schedule if any — guard against null/undefined
-  const allScheds = getSchedules() || {};
-  const saved = allScheds[monthKey.replace('-','_')] || {};
-  
-  // Ensure custom order is loaded so sequence matches main Schedule view
-  try{ await loadCustomEmpOrder(); }catch(e){}
+  const allScheds=getSchedules()||{};
+  try{await loadCustomEmpOrder();}catch(e){}
+  let emps=(getEmps()||[]).filter(e=>e&&e.status!=="resigned");
+  if(secFilter!=="ALL") emps=emps.filter(e=>e.sec===secFilter);
 
-  let emps = (getEmps() || []).filter(e => e && e.status !== 'resigned');
-  if(secFilter !== 'ALL') emps = emps.filter(e => e.sec === secFilter);
-
-  // ── Sort employees in same order as main Schedule view ──
-  // Mirror DISPLAY_ORDER from renderSchedule(): Main Ops → Relievers → Team,
-  // grouped by Metalliser → Slitter → Supervisor → Manager
-  const _GROUP_RANK = (e) => {
-    const role = getEmpRole(e).role;
-    if(['M1','M2'].includes(e.sec)){
-      if(role==='main')     return 1;
-      if(role==='reliever') return 2;
-      return 3; // assist/team
-    }
-    if(['S1','S2'].includes(e.sec)){
-      if(role==='main')     return 4;
-      if(role==='slit_rel') return 5;
-      return 6; // team
-    }
-    if(e.sec==='SUP'){
-      if(role==='sup_slit') return 7;
-      if(role==='sup_met')  return 8;
-      return 9;
-    }
-    if(e.sec==='MGR') return 10;
-    return 99;
+  const _GR=(e)=>{
+    const r=getEmpRole(e).role;
+    if(["M1","M2"].includes(e.sec)){if(r==="main")return 1;if(r==="reliever")return 2;return 3;}
+    if(["S1","S2"].includes(e.sec)){if(r==="main")return 4;if(r==="slit_rel")return 5;return 6;}
+    if(e.sec==="SUP"){if(r==="sup_slit")return 7;if(r==="sup_met")return 8;return 9;}
+    if(e.sec==="MGR")return 10; return 99;
   };
-  emps.sort((a,b) => {
-    const rA = _GROUP_RANK(a), rB = _GROUP_RANK(b);
-    if(rA !== rB) return rA - rB;
-    return getEmpDisplayOrder(a) - getEmpDisplayOrder(b);
+  emps.sort((a,b)=>{const rA=_GR(a),rB=_GR(b);if(rA!==rB)return rA-rB;return getEmpDisplayOrder(a)-getEmpDisplayOrder(b);});
+
+  const leaveMap={};
+  (getLeaves()||[]).filter(l=>l&&l.status==="approved"&&l.empId&&l.from&&l.to).forEach(l=>{
+    if(!leaveMap[l.empId])leaveMap[l.empId]=new Set();
+    const fd=new Date(l.from),td=new Date(l.to);
+    if(isNaN(fd.getTime())||isNaN(td.getTime()))return;
+    for(let dd=new Date(fd);dd<=td;dd.setDate(dd.getDate()+1))leaveMap[l.empId].add(dd.toISOString().slice(0,10));
   });
 
-  // Build grid
-  const headerDays = dayNums.map(d=>{
-    const dt = new Date(yr, mo-1, d);
-    const dow = ['S','M','T','W','T','F','S'][dt.getDay()];
-    return `<th style="min-width:32px;font-size:10px;padding:3px 2px;background:#1e293b;color:${dt.getDay()===0?'#f87171':'#94a3b8'}">${d}<br><span style="font-size:9px">${dow}</span></th>`;
-  }).join('');
+  const getSaved=(emp,dt)=>{
+    const yr2=dt.getFullYear(),mo2=dt.getMonth()+1,d2=dt.getDate();
+    const mk=yr2+"_"+String(mo2).padStart(2,"0");
+    const sv=allScheds[mk];
+    if(sv&&sv[emp.id]){let arr=sv[emp.id];if(!Array.isArray(arr))arr=Object.values(arr);return arr[d2-1]||"";}
+    if(typeof EXCEL_SCHEDULES!=="undefined"&&EXCEL_SCHEDULES[mk]&&EXCEL_SCHEDULES[mk][emp.id])return EXCEL_SCHEDULES[mk][emp.id][d2-1]||"";
+    if(yr2===2026&&mo2===3&&emp.ms)return emp.ms[d2-1]||"";
+    return "";
+  };
 
-  const rows = emps.map(emp => {
-    if(!emp || !emp.id) return '';
-    // Ensure empSaved is always an array (Firebase converts arrays to objects)
-    let empSaved = saved[emp.id];
-    if(empSaved && !Array.isArray(empSaved)){
-      empSaved = Array.from({length: daysInMonth}, (_,i) => empSaved[i] || empSaved[String(i)] || '');
-    }
-    if(!empSaved) empSaved = Array(daysInMonth).fill('');
-    
-    const empWoffDow = emp.woff ? (WOFF_DOW[emp.woff] ?? -1) : -1;
-    
-    // Build approved leave dates for this employee in this month
-    const empLeaves = new Set();
-    try{
-      (getLeaves()||[]).filter(l => l && l.status === 'approved' && l.empId === emp.id && l.from && l.to).forEach(l => {
-        const fromD = new Date(l.from);
-        const toD = new Date(l.to);
-        if(isNaN(fromD.getTime()) || isNaN(toD.getTime())) return;
-        for(let dd = new Date(fromD); dd <= toD; dd.setDate(dd.getDate() + 1)){
-          empLeaves.add(dd.toISOString().slice(0, 10));
-        }
-      });
-    }catch(leaveErr){ console.warn('Leave parse error for', emp.id, leaveErr); }
-    
-    const cells = dayNums.map((d,i) => {
-      const dateStr = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isLeaveDate = empLeaves.has(dateStr);
-      let val = empSaved[i] || (function(){
-        const mk2 = monthKey.replace('-','_');
-        if(typeof EXCEL_SCHEDULES !== 'undefined' && EXCEL_SCHEDULES[mk2] && EXCEL_SCHEDULES[mk2][emp.id]){
-          return EXCEL_SCHEDULES[mk2][emp.id][i] || '';
-        }
-        if(yr===2026 && mo===3 && emp.ms) return emp.ms[d-1]||'';
-        return '';
-      })();
-      // If approved leave exists and cell is empty or not already L, mark as L
-      if(isLeaveDate && val !== 'L') val = 'L';
-      const cls = val ? cellClass(val) : '';
-      const isWoffDay = empWoffDow !== -1 && new Date(yr, mo-1, d).getDay() === empWoffDow;
-      const leaveStyle = isLeaveDate ? 'outline:2px solid #f43f5e;border-radius:4px;box-shadow:0 0 4px rgba(244,63,94,.5);' : '';
-      const cellClick = isLeaveDate
-        ? `_confirmLeaveOverride(this,'${emp.id}',${i},'${dateStr}')`
-        : `cycleSBCell(this,'${emp.id}',${i},'${monthKey}')`;
-      return `<td style="padding:2px;${isWoffDay?'background:rgba(249,115,22,0.06);':''}" title="${isLeaveDate?'🛡️ Approved Leave':isWoffDay?emp.woff+' (Weekly Off)':''}">
-        <div class="shc ${cls}" style="width:28px;height:24px;font-size:10px;cursor:pointer;min-width:unset;${leaveStyle}${isWoffDay&&!val&&!isLeaveDate?'border:1px dashed rgba(249,115,22,0.3);':''}"
-          onclick="${cellClick}"
-          data-empid="${emp.id}" data-day="${i}" data-val="${val}">
-          ${val ? cellDisp(val) : '—'}
-        </div>
-      </td>`;
-    }).join('');
-    const s = SEC[emp.sec];
-    return `<tr>
+  let lastMo=-1;
+  const headerDays=allDates.map((dt,i)=>{
+    const mo2=dt.getMonth();const isMS=mo2!==lastMo;if(isMS)lastMo=mo2;
+    const isSun=dt.getDay()===0;
+    const moLbl=isMS?`<div style="font-size:8px;color:#f97316;font-weight:800">${dt.toLocaleDateString("hi-IN",{month:"short"})}</div>`:"";
+    return `<th style="min-width:30px;font-size:10px;padding:2px 1px;background:${isMS?"#1a2540":"#1e293b"};color:${isSun?"#f87171":"#94a3b8"};border-left:${isMS&&i>0?"2px solid rgba(249,115,22,0.4)":"none"}">${moLbl}${dt.getDate()}<br><span style="font-size:8px">${["S","M","T","W","T","F","S"][dt.getDay()]}</span></th>`;
+  }).join("");
+
+  const rows=emps.map(emp=>{
+    if(!emp||!emp.id)return"";
+    const empLeaves=leaveMap[emp.id]||new Set();
+    const woffDow=emp.woff?(WOFF_DOW[emp.woff]??-1):-1;
+    const cells=allDates.map((dt,i)=>{
+      const dateStr=dt.toISOString().slice(0,10);
+      const isLeave=empLeaves.has(dateStr);
+      let val=getSaved(emp,dt);
+      if(isLeave&&val!=="L")val="L";
+      const cls=val?cellClass(val):"";
+      const isWoff=woffDow!==-1&&dt.getDay()===woffDow;
+      const mo2=dt.getMonth()+1,prevMo=i>0?allDates[i-1].getMonth()+1:-1;
+      const isMoB=mo2!==prevMo&&i>0;
+      const cc=isLeave?`_confirmLeaveOverride(this,"${emp.id}",${i},"${dateStr}")`:`cycleSBCell(this,"${emp.id}",${i},"")`;
+      return `<td style="padding:2px;${isWoff?"background:rgba(249,115,22,0.06);":""}${isMoB?"border-left:2px solid rgba(249,115,22,0.3);":""}" title="${isLeave?"Approved Leave":isWoff?emp.woff+" off":""}">
+        <div class="shc ${cls}" style="width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset;${isLeave?"outline:2px solid #f43f5e;border-radius:4px;":""}"
+          onclick="${cc}" oncontextmenu="sbCtxMenu(event,this,'${emp.id}',${i});return false"
+          data-empid="${emp.id}" data-day="${i}" data-val="${val}" data-date="${dateStr}">
+          ${val?cellDisp(val):"&#8212;"}</div></td>`;
+    }).join("");
+    const s=SEC[emp.sec];
+    return `<tr data-emprow="${emp.id}" onclick="sbRowClick(event,this,'${emp.id}')" style="cursor:pointer">
       <td style="padding:4px 8px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;position:sticky;left:0;background:#0f172a;z-index:1;min-width:90px">
-        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${s?.color||'#fff'};margin-right:4px"></span>
-        ${emp.name.split(' ')[0]}
-        ${emp.woff?`<span style="font-size:8px;color:#f97316;font-weight:600;display:block;margin-top:1px">${emp.woff} off</span>`:''}
-      </td>
-      ${cells}
-    </tr>`;
-  }).join('');
+        <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${s?.color||"#fff"};margin-right:4px"></span>
+        ${emp.name.split(" ")[0]}
+        ${emp.woff?`<span style="font-size:8px;color:#f97316;font-weight:600;display:block;margin-top:1px">${emp.woff} off</span>`:""}
+      </td>${cells}</tr>`;
+  }).join("");
 
-  const monthLabel = new Date(yr, mo-1, 1).toLocaleDateString(_lang==='en'?'en-IN':'hi-IN',{month:'long',year:'numeric'});
-
+  const rl=startD.toLocaleDateString("hi-IN",{day:"numeric",month:"short"})+" — "+endD.toLocaleDateString("hi-IN",{day:"numeric",month:"short",year:"numeric"});
   openModal(`<div class="modal-handle"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div class="modal-title" style="margin:0">📅 ${monthLabel}</div>
-      <button onclick="openScheduleBuilder()" style="background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:12px">← बदलें</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="modal-title" style="margin:0;font-size:14px">📅 ${rl}</div>
+      <button onclick="openScheduleBuilder()" style="background:none;border:1px solid var(--border2);border-radius:8px;color:var(--muted);padding:5px 10px;cursor:pointer;font-size:11px">← बदलें</button>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-      <div id="sbCellLegend" style="font-size:11px;color:var(--muted2);flex:1">Cell tap करें: D → N → O → L → G → CO → ½ → Ab → साफ</div>
-      <button onclick="autoGenSchedule('${monthKey}')"
-        style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;
-        color:#fff;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;white-space:nowrap;
-        display:flex;align-items:center;gap:5px;font-family:inherit">
-        🤖 Auto बनाएं
-      </button>
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <div style="font-size:10px;color:var(--muted2);flex:1"><b style="color:#60a5fa">Tap</b>: shift बदलें &nbsp;&middot;&nbsp; <b style="color:#a78bfa">Row tap</b>: copy/paste &nbsp;&middot;&nbsp; <b style="color:#f97316">Right-click</b>: menu</div>
+      <button onclick="autoGenSchedule('_range_')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:inherit">🤖 Auto बनाएं</button>
     </div>
-    <div style="overflow-x:auto;margin-bottom:14px;border-radius:8px;border:1px solid var(--border2)">
-      <table style="border-collapse:collapse;width:100%">
+    <div id="sb_copybanner" style="display:none;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:7px 12px;margin-bottom:8px;font-size:12px;color:#60a5fa;align-items:center;justify-content:space-between">
+      <span id="sb_copyinfo">Row copy ho gai</span>
+      <button onclick="sbClearCopy()" style="background:none;border:none;color:#60a5fa;cursor:pointer;font-size:16px;padding:0 4px">&times;</button>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border2)">
+      <table style="border-collapse:collapse;width:100%" id="sb_table">
         <thead><tr>
           <th style="position:sticky;left:0;background:#1e293b;padding:4px 8px;font-size:11px;color:#94a3b8;text-align:left;min-width:90px">कर्मचारी</th>
           ${headerDays}
@@ -13565,37 +13449,148 @@ async function loadScheduleBuilder(){
       </table>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="submit-btn" style="flex:1" onclick="saveScheduleBuilder('${monthKey}')">💾 Save करें</button>
+      <button class="submit-btn" style="flex:1" onclick="saveScheduleRange()">💾 Save करें</button>
       <button class="cancel-btn" style="flex:1" onclick="closeModal()">रद्द करें</button>
     </div>`);
-  }catch(err){console.error('loadScheduleBuilder error:',err);toast('❌ Error: '+err.message);}
+  }catch(err){console.error("loadScheduleBuilder:",err);toast("❌ Error: "+err.message);}
 }
 
-// _sbData holds current edits: { empId: [array of shifts] }
+let _sbMeta = { startDate:"", endDate:"", dates:[], _lastSec:"ALL" };
+
+// _sbData: in-memory edits { empId:[shifts] }
 let _sbData = {};
+let _sbCopiedRow = null;
+let _sbSelectedRow = null;
 
 function cycleSBCell(el, empId, dayIdx, monthKey){
-  const order = ['D','N','O','L','G','C/O','H','OD','HLF','Ab',''];
-  const cur = el.dataset.val || '';
-  const next = order[(order.indexOf(cur)+1) % order.length];
-  
-  // Update visual
-  el.dataset.val = next;
-  el.className = 'shc ' + (next ? cellClass(next) : '');
-  el.style.cssText = 'width:28px;height:24px;font-size:10px;cursor:pointer;min-width:unset';
-  el.textContent = next ? cellDisp(next) : '—';
-  
-  // Store in memory
-  if(!_sbData[empId]) {
-    // Get current row values — scope to modal tbody only
-    const sbTbody = document.getElementById('sb_tbody');
-    const allCells = sbTbody
-      ? sbTbody.querySelectorAll(`[data-empid="${empId}"]`)
-      : document.querySelectorAll(`[data-empid="${empId}"]`);
-    _sbData[empId] = Array.from(allCells).map(c => c.dataset.val || '');
+  const order=["D","N","O","L","G","C/O","H","OD","HLF","Ab",""];
+  const cur=el.dataset.val||"";
+  const next=order[(order.indexOf(cur)+1)%order.length];
+  el.dataset.val=next;
+  el.className="shc "+(next?cellClass(next):"");
+  el.style.cssText="width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset";
+  el.innerHTML=next?cellDisp(next):"&#8212;";
+  const sbTbody=document.getElementById("sb_tbody");
+  if(!_sbData[empId]){
+    const ac=sbTbody?sbTbody.querySelectorAll(`[data-empid="${empId}"]`):document.querySelectorAll(`[data-empid="${empId}"]`);
+    _sbData[empId]=Array.from(ac).map(c=>c.dataset.val||"");
   }
-  _sbData[empId][dayIdx] = next;
+  _sbData[empId][dayIdx]=next;
 }
+
+function sbRowClick(evt,trEl,empId){
+  if(evt&&evt.target&&(evt.target.classList.contains("shc")||(evt.target.closest&&evt.target.closest(".shc"))))return;
+  const tbody=document.getElementById("sb_tbody");
+  if(!tbody)return;
+  if(_sbCopiedRow&&_sbCopiedRow.empId!==empId&&_sbSelectedRow===empId){sbPasteRow(empId);return;}
+  if(_sbSelectedRow===empId){sbCopyRow(empId,trEl);return;}
+  if(_sbSelectedRow){const p=tbody.querySelector(`tr[data-emprow="${_sbSelectedRow}"]`);if(p)p.style.background="";}
+  _sbSelectedRow=empId;
+  trEl.style.background="rgba(96,165,250,0.12)";
+  if(_sbCopiedRow&&_sbCopiedRow.empId!==empId){
+    _sbBanner('"'+_sbCopiedRow.name+'" ki shifts paste karne ke liye is row par phir tap karen');
+  }else{
+    _sbBanner("Row select hui — phir tap karen Copy ke liye");
+  }
+}
+
+function sbCopyRow(empId,trEl){
+  const tbody=document.getElementById("sb_tbody");
+  const cells=tbody?tbody.querySelectorAll(`[data-empid="${empId}"]`):[];
+  const vals=Array.from(cells).map(c=>c.dataset.val||"");
+  const emp=(getEmps()||[]).find(e=>e.id===empId);
+  _sbCopiedRow={empId,vals,name:emp?emp.name.split(" ")[0]:empId};
+  if(trEl)trEl.style.background="rgba(251,191,36,0.12)";
+  _sbBanner('"'+_sbCopiedRow.name+'" ki row copy hui — jis row par paste karna ho use tap karen');
+  toast("✅ "+_sbCopiedRow.name+" ki shifts copy ho gain");
+}
+
+function sbPasteRow(empId){
+  if(!_sbCopiedRow){toast("⚠️ Pehle koi row copy karen");return;}
+  const tbody=document.getElementById("sb_tbody");
+  const cells=tbody?tbody.querySelectorAll(`[data-empid="${empId}"]`):[];
+  if(!cells.length){toast("⚠️ Row nahi mili");return;}
+  _sbData[empId]=[];
+  cells.forEach((cell,i)=>{
+    const val=_sbCopiedRow.vals[i]||"";
+    cell.dataset.val=val;
+    cell.className="shc "+(val?cellClass(val):"");
+    cell.style.cssText="width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset";
+    cell.innerHTML=val?cellDisp(val):"&#8212;";
+    _sbData[empId][i]=val;
+  });
+  const row=tbody.querySelector(`tr[data-emprow="${empId}"]`);
+  if(row){row.style.background="rgba(34,197,94,0.15)";setTimeout(()=>{if(row)row.style.background="";},1200);}
+  const tEmp=(getEmps()||[]).find(e=>e.id===empId);
+  toast("✅ ""+_sbCopiedRow.name+"" → ""+(tEmp?tEmp.name.split(" ")[0]:empId)+"" paste ho gain");
+  _sbSelectedRow=null;
+  _sbBanner('"'+_sbCopiedRow.name+'" ki row copy hai — aur rows par paste karen');
+}
+
+function sbCtxMenu(evt,cellEl,empId,dayIdx){
+  evt.preventDefault();
+  const emp=(getEmps()||[]).find(e=>e.id===empId);
+  const empName=emp?emp.name.split(" ")[0]:empId;
+  const pb=_sbCopiedRow&&_sbCopiedRow.empId!==empId
+    ?`<button class="submit-btn" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#059669,#047857)" onclick="closeModal();sbPasteRow('${empId}')">Paste: "${_sbCopiedRow.name}" ki Shifts</button>`:"";
+  openModal(`<div class="modal-handle"></div>
+    <div style="font-weight:900;font-size:15px;color:var(--text);margin-bottom:12px">${empName} — Row Action</div>
+    <button class="submit-btn" style="width:100%;margin-bottom:8px" onclick="closeModal();_sbCopyById('${empId}')">Copy Is Row Ko</button>
+    ${pb}
+    <button class="cancel-btn" style="width:100%" onclick="closeModal()">रद्द करें</button>`);
+}
+
+function _sbCopyById(empId){
+  const tbody=document.getElementById("sb_tbody");
+  const trEl=tbody?tbody.querySelector(`tr[data-emprow="${empId}"]`):null;
+  sbCopyRow(empId,trEl);
+}
+
+function sbClearCopy(){
+  _sbCopiedRow=null;_sbSelectedRow=null;
+  const b=document.getElementById("sb_copybanner");if(b)b.style.display="none";
+  const tbody=document.getElementById("sb_tbody");
+  if(tbody)tbody.querySelectorAll("tr[data-emprow]").forEach(r=>r.style.background="");
+}
+
+function _sbBanner(msg){
+  const b=document.getElementById("sb_copybanner"),i=document.getElementById("sb_copyinfo");
+  if(b&&i){i.textContent=msg;b.style.display="flex";}
+}
+
+async function saveScheduleRange(){
+  const{dates}=_sbMeta;
+  if(!dates||!dates.length){toast("⚠️ Schedule open nahi hai");return;}
+  const tbody=document.getElementById("sb_tbody");
+  if(!tbody){toast("⚠️ Schedule Builder open nahi hai");return;}
+  const emps=getEmps().filter(e=>e.status!=="resigned");
+  const byMonth={};
+  emps.forEach(emp=>{
+    const cells=tbody.querySelectorAll(`[data-empid="${emp.id}"]`);
+    if(!cells.length)return;
+    cells.forEach((cell,i)=>{
+      const dt=dates[i];if(!dt)return;
+      const mk=dt.getFullYear()+"_"+String(dt.getMonth()+1).padStart(2,"0");
+      const dayIdx=dt.getDate()-1;
+      if(!byMonth[mk])byMonth[mk]={};
+      if(!byMonth[mk][emp.id]){const dim=new Date(dt.getFullYear(),dt.getMonth()+1,0).getDate();byMonth[mk][emp.id]=Array(dim).fill("");}
+      byMonth[mk][emp.id][dayIdx]=cell.dataset.val||"";
+    });
+  });
+  const allScheds=getSchedules()||{};
+  try{
+    for(const[mk,sd]of Object.entries(byMonth)){
+      const ex=allScheds[mk]||{};const mg={...ex};
+      for(const[eid,arr]of Object.entries(sd)){
+        if(!mg[eid])mg[eid]=arr;
+        else{const m=[...(Array.isArray(mg[eid])?mg[eid]:Object.values(mg[eid]))];arr.forEach((v,idx)=>{if(v!=="")m[idx]=v;});mg[eid]=m;}
+      }
+      await fbSet("schedules/"+mk,mg);
+    }
+    toast("✅ Schedule save ho gai!");closeModal();renderSchedule();
+  }catch(e){toast("❌ Error: "+e.message);}
+}
+
 
 
 // ════════════════════════════════════════════════════════════════
@@ -13675,11 +13670,20 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
 }
 
 function autoGenSchedule(monthKey){
-  const [yr, mo] = monthKey.split('-').map(Number);
-  const daysInMonth = new Date(yr, mo, 0).getDate();
+  const useRange = monthKey === '_range_';
+  let allDates;
   const emps = getEmps().filter(e => e.status !== 'resigned');
-
-  // FIX: scope to modal tbody only — background schedule grid also has
+  if(useRange){
+    allDates = _sbMeta.dates || [];
+    if(!allDates.length){ toast('Schedule range nahi mili'); return; }
+  } else {
+    const [yr2,mo2] = monthKey.split('-').map(Number);
+    const dim = new Date(yr2, mo2, 0).getDate();
+    allDates = Array.from({length:dim},(_,i)=>new Date(yr2,mo2-1,i+1));
+  }
+  const yr = allDates[0].getFullYear(), mo = allDates[0].getMonth()+1;
+  const daysInMonth = allDates.length;
+  // scope to modal tbody only — background schedule grid also has
   // cells with [data-empid] which would pollute the result and shift values
   const sbTbody = document.getElementById('sb_tbody');
   if(!sbTbody){ toast('⚠️ पहले Schedule खोलें'); return; }
@@ -13714,13 +13718,12 @@ function autoGenSchedule(monthKey){
 
     // Special: no-rotation employees (MGR = G shift)
     if(isMgrEmp){
-      const schedule = Array.from({length: daysInMonth}, (_, i) => {
-        const dateStr = `${yr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
-        const dow = new Date(yr, mo-1, i+1).getDay();
+      const schedule = allDates.map(dt => {
+        const dateStr = dt.toISOString().slice(0,10);
         if(empLeaves.has(dateStr)){ leaveProtected++; return 'L'; }
-        return (woffDow !== -1 && dow === woffDow) ? 'O' : 'G';
+        return (woffDow !== -1 && dt.getDay() === woffDow) ? 'O' : 'G';
       });
-      _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, yr, mo);
+      _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, allDates);
       generated++;
       return;
     }
@@ -13735,25 +13738,14 @@ function autoGenSchedule(monthKey){
       curShift = (curShift === 'D') ? 'N' : 'D';
     }
 
-    // Generate the month — protect approved leaves
-    const schedule = [];
-    for(let d = 0; d < daysInMonth; d++){
-      const dateStr = `${yr}-${String(mo).padStart(2,'0')}-${String(d+1).padStart(2,'0')}`;
-      const dow = new Date(yr, mo-1, d+1).getDay();
-
-      if(empLeaves.has(dateStr)){
-        // ── APPROVED LEAVE — do not overwrite ──
-        schedule.push('L');
-        leaveProtected++;
-      } else if(woffDow !== -1 && dow === woffDow){
-        schedule.push('O');
-        curShift = (curShift === 'D') ? 'N' : 'D';
-      } else {
-        schedule.push(curShift);
-      }
-    }
-
-    _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, yr, mo);
+    // Generate schedule for each date in range
+    const schedule = allDates.map(dt => {
+      const dateStr = dt.toISOString().slice(0,10);
+      if(empLeaves.has(dateStr)){ leaveProtected++; return 'L'; }
+      if(woffDow !== -1 && dt.getDay() === woffDow){ const sh='O'; curShift=(curShift==='D')?'N':'D'; return sh; }
+      return curShift;
+    });
+    _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, allDates);
     generated++;
   });
 
@@ -13763,24 +13755,22 @@ function autoGenSchedule(monthKey){
   toast(msg);
 }
 
-function _applyScheduleToGrid(empId, schedule, cells, empLeaves, yr, mo){
+function _applyScheduleToGrid(empId, schedule, cells, empLeaves, allDatesOrYr, mo){
+  const isArr = Array.isArray(allDatesOrYr);
   cells.forEach((cell, i) => {
     const val = schedule[i] || '';
-    const dateStr = (yr && mo) ? `${yr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}` : '';
-    const isLeaveProtected = empLeaves && dateStr && empLeaves.has(dateStr);
-
+    let dateStr = '';
+    if(isArr){ dateStr = allDatesOrYr[i] ? allDatesOrYr[i].toISOString().slice(0,10) : ''; }
+    else{ dateStr = (allDatesOrYr&&mo)?`${allDatesOrYr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`:''; }
+    const isLP = empLeaves && dateStr && empLeaves.has(dateStr);
     cell.dataset.val = val;
     cell.className = 'shc ' + (val ? cellClass(val) : '');
-    cell.style.cssText = 'width:28px;height:24px;font-size:10px;cursor:pointer;min-width:unset'
-      + (isLeaveProtected ? ';outline:2px solid #f43f5e;border-radius:4px;box-shadow:0 0 4px rgba(244,63,94,.5)' : '');
-    cell.textContent = val ? cellDisp(val) : '—';
-
-    if(isLeaveProtected){
-      // Make leave cells show confirmation before changing
-      cell.onclick = function(){ _confirmLeaveOverride(this, empId, i, dateStr); };
-    }
+    cell.style.cssText = 'width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset'
+      + (isLP ? ';outline:2px solid #f43f5e;border-radius:4px;box-shadow:0 0 4px rgba(244,63,94,.5)' : '');
+    cell.innerHTML = val ? cellDisp(val) : '&#8212;';
+    if(isLP){ cell.onclick = function(){ _confirmLeaveOverride(this, empId, i, dateStr); }; }
+    else { cell.onclick = function(){ cycleSBCell(this, empId, i, ''); }; }
   });
-  // Store in _sbData memory
   _sbData[empId] = [...schedule];
 }
 
