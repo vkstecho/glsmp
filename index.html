@@ -3480,7 +3480,7 @@ async function initAdminAuth(){
 
 // ── CONFIG ──
 const CFG = {
-  license:   { expiry: new Date(2026,11,31), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2026,11,31) },
+  license:   { expiry: new Date(2026,11,31), warnDays:15, masterKey:'45edc2356764c728add613126ab4c53d14f9339a238b2393d56f84292d5ce319', extendKey:'5dfd85eda291bef92f908b4cfa61bb62283afdaa3a947a8688eb8dcb6c330e65', extendTo: new Date(2027,11,31) },
   // SECURITY: Admin credentials checked ONLY via Firebase adminAuth — not hardcoded
   adminCreds:[], // Empty — all auth goes through Firebase
   supervisorInstructor: 'MOHIT',
@@ -13288,14 +13288,14 @@ async function resetShiftOverride(empId, date){
 const SHIFT_QUICK = ['D','N','O','L','G','C/O','HLF','Ab'];
 
 function openScheduleBuilder(){
-  const now = new Date();
-  const nm  = new Date(now.getFullYear(), now.getMonth()+1, 1);
-  const nme = new Date(now.getFullYear(), now.getMonth()+2, 0);
-  const fmt = d => d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const now=new Date();
+  const nm=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const nme=new Date(now.getFullYear(),now.getMonth()+2,0);
+  const fmt=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
   openModal(`<div class="modal-handle"></div>
     <div class="modal-title">📋 Schedule बनाएं</div>
     <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#f97316">
-      📅 जिस date से जिस date तक schedule बनानी हो वो range चुनें
+      📅 जिस date से जिस date तक schedule बनानी हो, वो range चुनें
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
@@ -13317,7 +13317,7 @@ function openScheduleBuilder(){
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
       <button onclick="_sbQuick('thisMonth')" style="padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer">इस महीने</button>
       <button onclick="_sbQuick('nextMonth')" style="padding:8px 4px;border-radius:8px;border:1px solid #f97316;background:rgba(249,115,22,.08);color:#f97316;font-size:11px;font-weight:700;cursor:pointer">अगले महीने</button>
-      <button onclick="_sbQuick('next15')"   style="padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer">अगले 15 दिन</button>
+      <button onclick="_sbQuick('next15')" style="padding:8px 4px;border-radius:8px;border:1px solid var(--border2);background:var(--card2);color:var(--muted2);font-size:11px;font-weight:700;cursor:pointer">अगले 15 दिन</button>
     </div>
     <div style="display:flex;gap:8px">
       <button class="submit-btn" style="flex:1" onclick="_sbOpen()">📋 Schedule खोलें</button>
@@ -13351,25 +13351,22 @@ const WOFF_DOW = {SUN:0,MON:1,TUE:2,WED:3,THU:4,FRI:5,SAT:6};
 async function loadScheduleBuilder(startDateStr, endDateStr){
   try{
   const secFilter=(document.getElementById("sb_sec")&&document.getElementById("sb_sec").value)||(_sbMeta._lastSec||"ALL");
-  const startD=new Date(startDateStr), endD=new Date(endDateStr);
+  const startD=new Date(startDateStr),endD=new Date(endDateStr);
   const allDates=[];
-  for(let d=new Date(startD);d<=endD;d.setDate(d.getDate()+1)) allDates.push(new Date(d));
+  for(let d=new Date(startD);d<=endD;d.setDate(d.getDate()+1))allDates.push(new Date(d));
   _sbMeta={startDate:startDateStr,endDate:endDateStr,dates:allDates,_lastSec:secFilter};
-
   const allScheds=getSchedules()||{};
   try{await loadCustomEmpOrder();}catch(e){}
   let emps=(getEmps()||[]).filter(e=>e&&e.status!=="resigned");
-  if(secFilter!=="ALL") emps=emps.filter(e=>e.sec===secFilter);
-
+  if(secFilter!=="ALL")emps=emps.filter(e=>e.sec===secFilter);
   const _GR=(e)=>{
     const r=getEmpRole(e).role;
     if(["M1","M2"].includes(e.sec)){if(r==="main")return 1;if(r==="reliever")return 2;return 3;}
     if(["S1","S2"].includes(e.sec)){if(r==="main")return 4;if(r==="slit_rel")return 5;return 6;}
     if(e.sec==="SUP"){if(r==="sup_slit")return 7;if(r==="sup_met")return 8;return 9;}
-    if(e.sec==="MGR")return 10; return 99;
+    if(e.sec==="MGR")return 10;return 99;
   };
   emps.sort((a,b)=>{const rA=_GR(a),rB=_GR(b);if(rA!==rB)return rA-rB;return getEmpDisplayOrder(a)-getEmpDisplayOrder(b);});
-
   const leaveMap={};
   (getLeaves()||[]).filter(l=>l&&l.status==="approved"&&l.empId&&l.from&&l.to).forEach(l=>{
     if(!leaveMap[l.empId])leaveMap[l.empId]=new Set();
@@ -13377,7 +13374,6 @@ async function loadScheduleBuilder(startDateStr, endDateStr){
     if(isNaN(fd.getTime())||isNaN(td.getTime()))return;
     for(let dd=new Date(fd);dd<=td;dd.setDate(dd.getDate()+1))leaveMap[l.empId].add(dd.toISOString().slice(0,10));
   });
-
   const getSaved=(emp,dt)=>{
     const yr2=dt.getFullYear(),mo2=dt.getMonth()+1,d2=dt.getDate();
     const mk=yr2+"_"+String(mo2).padStart(2,"0");
@@ -13387,7 +13383,6 @@ async function loadScheduleBuilder(startDateStr, endDateStr){
     if(yr2===2026&&mo2===3&&emp.ms)return emp.ms[d2-1]||"";
     return "";
   };
-
   let lastMo=-1;
   const headerDays=allDates.map((dt,i)=>{
     const mo2=dt.getMonth();const isMS=mo2!==lastMo;if(isMS)lastMo=mo2;
@@ -13395,7 +13390,6 @@ async function loadScheduleBuilder(startDateStr, endDateStr){
     const moLbl=isMS?`<div style="font-size:8px;color:#f97316;font-weight:800">${dt.toLocaleDateString("hi-IN",{month:"short"})}</div>`:"";
     return `<th style="min-width:30px;font-size:10px;padding:2px 1px;background:${isMS?"#1a2540":"#1e293b"};color:${isSun?"#f87171":"#94a3b8"};border-left:${isMS&&i>0?"2px solid rgba(249,115,22,0.4)":"none"}">${moLbl}${dt.getDate()}<br><span style="font-size:8px">${["S","M","T","W","T","F","S"][dt.getDay()]}</span></th>`;
   }).join("");
-
   const rows=emps.map(emp=>{
     if(!emp||!emp.id)return"";
     const empLeaves=leaveMap[emp.id]||new Set();
@@ -13410,7 +13404,7 @@ async function loadScheduleBuilder(startDateStr, endDateStr){
       const mo2=dt.getMonth()+1,prevMo=i>0?allDates[i-1].getMonth()+1:-1;
       const isMoB=mo2!==prevMo&&i>0;
       const cc=isLeave?`_confirmLeaveOverride(this,"${emp.id}",${i},"${dateStr}")`:`cycleSBCell(this,"${emp.id}",${i},"")`;
-      return `<td style="padding:2px;${isWoff?"background:rgba(249,115,22,0.06);":""}${isMoB?"border-left:2px solid rgba(249,115,22,0.3);":""}" title="${isLeave?"Approved Leave":isWoff?emp.woff+" off":""}">
+      return `<td style="padding:2px;${isWoff?"background:rgba(249,115,22,0.06);":""}${isMoB?"border-left:2px solid rgba(249,115,22,0.3);":""}">
         <div class="shc ${cls}" style="width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset;${isLeave?"outline:2px solid #f43f5e;border-radius:4px;":""}"
           onclick="${cc}" oncontextmenu="sbCtxMenu(event,this,'${emp.id}',${i});return false"
           data-empid="${emp.id}" data-day="${i}" data-val="${val}" data-date="${dateStr}">
@@ -13424,7 +13418,6 @@ async function loadScheduleBuilder(startDateStr, endDateStr){
         ${emp.woff?`<span style="font-size:8px;color:#f97316;font-weight:600;display:block;margin-top:1px">${emp.woff} off</span>`:""}
       </td>${cells}</tr>`;
   }).join("");
-
   const rl=startD.toLocaleDateString("hi-IN",{day:"numeric",month:"short"})+" — "+endD.toLocaleDateString("hi-IN",{day:"numeric",month:"short",year:"numeric"});
   openModal(`<div class="modal-handle"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -13462,7 +13455,7 @@ let _sbData = {};
 let _sbCopiedRow = null;
 let _sbSelectedRow = null;
 
-function cycleSBCell(el, empId, dayIdx, monthKey){
+function cycleSBCell(el,empId,dayIdx,monthKey){
   const order=["D","N","O","L","G","C/O","H","OD","HLF","Ab",""];
   const cur=el.dataset.val||"";
   const next=order[(order.indexOf(cur)+1)%order.length];
@@ -13480,8 +13473,7 @@ function cycleSBCell(el, empId, dayIdx, monthKey){
 
 function sbRowClick(evt,trEl,empId){
   if(evt&&evt.target&&(evt.target.classList.contains("shc")||(evt.target.closest&&evt.target.closest(".shc"))))return;
-  const tbody=document.getElementById("sb_tbody");
-  if(!tbody)return;
+  const tbody=document.getElementById("sb_tbody");if(!tbody)return;
   if(_sbCopiedRow&&_sbCopiedRow.empId!==empId&&_sbSelectedRow===empId){sbPasteRow(empId);return;}
   if(_sbSelectedRow===empId){sbCopyRow(empId,trEl);return;}
   if(_sbSelectedRow){const p=tbody.querySelector(`tr[data-emprow="${_sbSelectedRow}"]`);if(p)p.style.background="";}
@@ -13522,7 +13514,7 @@ function sbPasteRow(empId){
   const row=tbody.querySelector(`tr[data-emprow="${empId}"]`);
   if(row){row.style.background="rgba(34,197,94,0.15)";setTimeout(()=>{if(row)row.style.background="";},1200);}
   const tEmp=(getEmps()||[]).find(e=>e.id===empId);
-  toast("✅ ""+_sbCopiedRow.name+"" → ""+(tEmp?tEmp.name.split(" ")[0]:empId)+"" paste ho gain");
+  toast("✅ \""+_sbCopiedRow.name+"\" → \""+(tEmp?tEmp.name.split(" ")[0]:empId)+"\" paste ho gain");
   _sbSelectedRow=null;
   _sbBanner('"'+_sbCopiedRow.name+'" ki row copy hai — aur rows par paste karen');
 }
@@ -13532,7 +13524,7 @@ function sbCtxMenu(evt,cellEl,empId,dayIdx){
   const emp=(getEmps()||[]).find(e=>e.id===empId);
   const empName=emp?emp.name.split(" ")[0]:empId;
   const pb=_sbCopiedRow&&_sbCopiedRow.empId!==empId
-    ?`<button class="submit-btn" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#059669,#047857)" onclick="closeModal();sbPasteRow('${empId}')">Paste: "${_sbCopiedRow.name}" ki Shifts</button>`:"";
+    ?`<button class="submit-btn" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,#059669,#047857)" onclick="closeModal();sbPasteRow('${empId}')">Paste: "${_sbCopiedRow.name}" ki Shifts</button>`:""
   openModal(`<div class="modal-handle"></div>
     <div style="font-weight:900;font-size:15px;color:var(--text);margin-bottom:12px">${empName} — Row Action</div>
     <button class="submit-btn" style="width:100%;margin-bottom:8px" onclick="closeModal();_sbCopyById('${empId}')">Copy Is Row Ko</button>
@@ -13590,7 +13582,6 @@ async function saveScheduleRange(){
     toast("✅ Schedule save ho gai!");closeModal();renderSchedule();
   }catch(e){toast("❌ Error: "+e.message);}
 }
-
 
 
 // ════════════════════════════════════════════════════════════════
@@ -13670,19 +13661,19 @@ function findLastShiftBeforeMonth(emp, targetYr, targetMo){
 }
 
 function autoGenSchedule(monthKey){
-  const useRange = monthKey === '_range_';
+  const useRange=monthKey==='_range_';
   let allDates;
-  const emps = getEmps().filter(e => e.status !== 'resigned');
+  const emps=getEmps().filter(e=>e.status!=='resigned');
   if(useRange){
-    allDates = _sbMeta.dates || [];
-    if(!allDates.length){ toast('Schedule range nahi mili'); return; }
-  } else {
-    const [yr2,mo2] = monthKey.split('-').map(Number);
-    const dim = new Date(yr2, mo2, 0).getDate();
-    allDates = Array.from({length:dim},(_,i)=>new Date(yr2,mo2-1,i+1));
+    allDates=_sbMeta.dates||[];
+    if(!allDates.length){toast('⚠️ Schedule range nahi mili');return;}
+  }else{
+    const [yr2,mo2]=monthKey.split('-').map(Number);
+    const dim=new Date(yr2,mo2,0).getDate();
+    allDates=Array.from({length:dim},(_,i)=>new Date(yr2,mo2-1,i+1));
   }
-  const yr = allDates[0].getFullYear(), mo = allDates[0].getMonth()+1;
-  const daysInMonth = allDates.length;
+  const yr=allDates[0].getFullYear(),mo=allDates[0].getMonth()+1;
+  const daysInMonth=allDates.length;
   // scope to modal tbody only — background schedule grid also has
   // cells with [data-empid] which would pollute the result and shift values
   const sbTbody = document.getElementById('sb_tbody');
@@ -13718,12 +13709,12 @@ function autoGenSchedule(monthKey){
 
     // Special: no-rotation employees (MGR = G shift)
     if(isMgrEmp){
-      const schedule = allDates.map(dt => {
-        const dateStr = dt.toISOString().slice(0,10);
-        if(empLeaves.has(dateStr)){ leaveProtected++; return 'L'; }
-        return (woffDow !== -1 && dt.getDay() === woffDow) ? 'O' : 'G';
+      const schedule=allDates.map(dt=>{
+        const dateStr=dt.toISOString().slice(0,10);
+        if(empLeaves.has(dateStr)){leaveProtected++;return 'L';}
+        return(woffDow!==-1&&dt.getDay()===woffDow)?'O':'G';
       });
-      _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, allDates);
+      _applyScheduleToGrid(emp.id,schedule,cells,empLeaves,allDates);
       generated++;
       return;
     }
@@ -13738,14 +13729,13 @@ function autoGenSchedule(monthKey){
       curShift = (curShift === 'D') ? 'N' : 'D';
     }
 
-    // Generate schedule for each date in range
-    const schedule = allDates.map(dt => {
-      const dateStr = dt.toISOString().slice(0,10);
-      if(empLeaves.has(dateStr)){ leaveProtected++; return 'L'; }
-      if(woffDow !== -1 && dt.getDay() === woffDow){ const sh='O'; curShift=(curShift==='D')?'N':'D'; return sh; }
+    const schedule=allDates.map(dt=>{
+      const dateStr=dt.toISOString().slice(0,10);
+      if(empLeaves.has(dateStr)){leaveProtected++;return 'L';}
+      if(woffDow!==-1&&dt.getDay()===woffDow){const sh='O';curShift=(curShift==='D')?'N':'D';return sh;}
       return curShift;
     });
-    _applyScheduleToGrid(emp.id, schedule, cells, empLeaves, allDates);
+    _applyScheduleToGrid(emp.id,schedule,cells,empLeaves,allDates);
     generated++;
   });
 
@@ -13755,23 +13745,24 @@ function autoGenSchedule(monthKey){
   toast(msg);
 }
 
-function _applyScheduleToGrid(empId, schedule, cells, empLeaves, allDatesOrYr, mo){
-  const isArr = Array.isArray(allDatesOrYr);
-  cells.forEach((cell, i) => {
-    const val = schedule[i] || '';
-    let dateStr = '';
-    if(isArr){ dateStr = allDatesOrYr[i] ? allDatesOrYr[i].toISOString().slice(0,10) : ''; }
-    else{ dateStr = (allDatesOrYr&&mo)?`${allDatesOrYr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`:''; }
-    const isLP = empLeaves && dateStr && empLeaves.has(dateStr);
-    cell.dataset.val = val;
-    cell.className = 'shc ' + (val ? cellClass(val) : '');
-    cell.style.cssText = 'width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset'
-      + (isLP ? ';outline:2px solid #f43f5e;border-radius:4px;box-shadow:0 0 4px rgba(244,63,94,.5)' : '');
-    cell.innerHTML = val ? cellDisp(val) : '&#8212;';
-    if(isLP){ cell.onclick = function(){ _confirmLeaveOverride(this, empId, i, dateStr); }; }
-    else { cell.onclick = function(){ cycleSBCell(this, empId, i, ''); }; }
+function _applyScheduleToGrid(empId,schedule,cells,empLeaves,allDatesOrYr,mo){
+  const isArr=Array.isArray(allDatesOrYr);
+  cells.forEach((cell,i)=>{
+    const val=schedule[i]||'';
+    let dateStr='';
+    if(isArr){dateStr=allDatesOrYr[i]?allDatesOrYr[i].toISOString().slice(0,10):'';}
+    else{dateStr=(allDatesOrYr&&mo)?`${allDatesOrYr}-${String(mo).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`:'';
+}
+    const isLP=empLeaves&&dateStr&&empLeaves.has(dateStr);
+    cell.dataset.val=val;
+    cell.className='shc '+(val?cellClass(val):'');
+    cell.style.cssText='width:26px;height:24px;font-size:10px;cursor:pointer;min-width:unset'
+      +(isLP?';outline:2px solid #f43f5e;border-radius:4px;box-shadow:0 0 4px rgba(244,63,94,.5)':'');
+    cell.innerHTML=val?cellDisp(val):'&#8212;';
+    if(isLP){cell.onclick=function(){_confirmLeaveOverride(this,empId,i,dateStr);};}
+    else{cell.onclick=function(){cycleSBCell(this,empId,i,'');};}
   });
-  _sbData[empId] = [...schedule];
+  _sbData[empId]=[...schedule];
 }
 
 function _confirmLeaveOverride(cell, empId, dayIdx, dateStr){
